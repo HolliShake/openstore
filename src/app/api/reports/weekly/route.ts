@@ -1,16 +1,16 @@
 /**
  * OpenStore — Weekly report DATA endpoint (JSON only).
- * GET /api/reports/weekly?week=current|prev|0..N   (admin only)
+ * GET /api/reports/weekly?week=current|prev|0..N   (signed-in staff)
  *
  * Returns every figure the printable weekly report view needs. Rendering is
  * done by the view layer at /report — API routes carry data, not markup.
  */
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
-import { ok, serverError, withAdmin } from "@/lib/api";
+import { ok, serverError, withStaff } from "@/lib/api";
 import { weekRangeOffset } from "@/lib/format";
 
-export const GET = withAdmin(async (req: NextRequest) => {
+export const GET = withStaff(async (req: NextRequest) => {
   try {
     const url = new URL(req.url);
     const weekParam = url.searchParams.get("week") ?? "current";

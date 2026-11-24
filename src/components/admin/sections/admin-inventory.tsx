@@ -23,7 +23,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import DataTable from "@/components/common/table.component";
 import SelectInput from "@/components/common/select.component";
-import Modal, { useModal } from "@/components/common/modal.component";
+import { useModal } from "@/components/common/modal.component";
+import ConfirmModal from "@/components/common/confirm.component";
 import { queryKeys } from "@/lib/query-client";
 import { DEFAULT_PAGE_SIZE, type PaginationResult } from "@/lib/pagination";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
@@ -54,7 +55,7 @@ export function AdminInventory() {
   const debouncedQuery = useDebouncedValue(query, 300);
   const productModal = useModal<ProductFormValue>();
   const historyModal = useModal<PurchaseHistoryProduct>();
-  const deleteModal = useModal<string>();
+  const deleteModal = useModal<Product>();
 
   const { data: products, isLoading } = useQuery<PaginationResult<Product>>({
     queryKey: [
@@ -317,7 +318,7 @@ export function AdminInventory() {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 text-destructive hover:text-destructive"
-                      onClick={() => deleteModal.openFn(product.id)}
+                      onClick={() => deleteModal.openFn(product)}
                       aria-label="Delete"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -332,26 +333,16 @@ export function AdminInventory() {
 
       <ProductFormDialog controller={productModal} />
       <PurchaseHistoryDialog controller={historyModal} />
-      <Modal controller={deleteModal} title="Remove this product?" closable>
-        <p className="mb-6 text-sm text-muted-foreground">
-          The product will be set to inactive. It will no longer appear on the storefront
-          or in POS, but historical sales and losses are preserved.
-        </p>
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={deleteModal.closeFn}>
-            Cancel
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={() => {
-              if (deleteModal.data) deleteMutation.mutate(deleteModal.data);
-            }}
-            disabled={deleteMutation.isPending}
-          >
-            Remove product
-          </Button>
-        </div>
-      </Modal>
+      <ConfirmModal
+        state={deleteModal}
+        title="Remove this product?"
+        description={(product) =>
+          `${product?.name ?? "This product"} will be set to inactive. It will no longer appear on the storefront or in POS, but historical sales and losses are preserved.`
+        }
+        confirmLabel="Remove product"
+        isLoading={deleteMutation.isPending}
+        onConfirm={(product) => deleteMutation.mutate(product.id)}
+      />
     </div>
   );
 }

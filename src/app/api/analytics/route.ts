@@ -18,9 +18,9 @@
  */
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
-import { ok, serverError, withAdmin } from "@/lib/api";
+import { ok, serverError, withStaff } from "@/lib/api";
 
-export const GET = withAdmin(async (req: NextRequest) => {
+export const GET = withStaff(async (req: NextRequest) => {
   try {
     const url = new URL(req.url);
     const weeks = Math.max(1, Math.min(52, parseInt(url.searchParams.get("weeks") ?? "4", 10) || 4));

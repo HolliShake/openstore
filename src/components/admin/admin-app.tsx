@@ -37,6 +37,13 @@ const SECTIONS: AdminSection[] = [
   { id: "settings", label: "Settings", icon: Settings, description: "Store name, images & tagline" },
 ];
 
+const CASHIER_SECTION_IDS = new Set<AdminSectionId>([
+  "dashboard",
+  "pos",
+  "reports",
+  "insights",
+]);
+
 export function AdminApp({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -48,23 +55,26 @@ export function AdminApp({ children }: { children: ReactNode }) {
     SECTIONS.find((section) => section.id === sectionSlug)?.id ?? "dashboard";
   const role = session?.user?.role ?? "admin";
   const isCashier = role === "cashier";
-  const sections = isCashier ? SECTIONS.filter((section) => section.id === "pos") : SECTIONS;
+  const sections = isCashier
+    ? SECTIONS.filter((section) => CASHIER_SECTION_IDS.has(section.id))
+    : SECTIONS;
+  const hasSectionAccess = !isCashier || CASHIER_SECTION_IDS.has(activeId);
 
   useEffect(() => {
     if (status === "unauthenticated") {
       router.replace("/login");
-    } else if (status === "authenticated" && isCashier && activeId !== "pos") {
+    } else if (status === "authenticated" && !hasSectionAccess) {
       router.replace("/admin/pos");
     }
-  }, [status, isCashier, activeId, router]);
+  }, [status, hasSectionAccess, router]);
 
-  if (status === "loading" || !session || (isCashier && activeId !== "pos")) {
+  if (status === "loading" || !session || !hasSectionAccess) {
     const loadingMessage =
       status === "loading"
         ? "Checking your session"
         : !session
           ? "Redirecting to sign in"
-          : "Opening checkout";
+          : "Opening POS";
     return <LoadingScreen storeName={config.storeName} message={loadingMessage} />;
   }
 

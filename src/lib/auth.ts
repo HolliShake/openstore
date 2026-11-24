@@ -2,7 +2,7 @@
  * OpenStore — NextAuth credentials provider.
  * Staff accounts with roles (see prisma/schema.prisma):
  *   - "admin"  : full access (inventory, reports, cashiers, POS, …)
- *   - "cashier": POS checkout only
+ *   - "cashier": dashboard, POS, reports, and insights
  * Seeded by scripts/seed.ts (admin) and managed in the Cashiers section.
  */
 import type { NextAuthOptions } from "next-auth";

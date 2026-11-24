@@ -29,6 +29,7 @@ import { Badge } from "@/components/ui/badge";
 import DataTable from "@/components/common/table.component";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Modal, { useModal, type ModalState } from "@/components/common/modal.component";
+import ConfirmModal from "@/components/common/confirm.component";
 import SelectInput from "@/components/common/select.component";
 import { formatDate } from "@/lib/format";
 import { toast } from "sonner";
@@ -201,8 +202,8 @@ export function AdminCashiers() {
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-muted-foreground">
           <p>
-            Cashiers sign in on the same screen and land directly on the POS / Checkout
-            page. They can record sales and see the most recent transactions — nothing else.
+            Cashiers can access the dashboard, POS / Checkout, reports, and insights.
+            Their name is recorded on every sale for accountability.
           </p>
           <p>
             Inventory, stock-in, losses, expenses, reports and this page are admin-only,
@@ -223,32 +224,16 @@ export function AdminCashiers() {
         }}
       />
 
-      <Modal
-        controller={deleteModal}
-        title={`Delete “${deleteModal.data?.username ?? ""}”?`}
-        size="sm"
-        closable
-      >
-        <p className="mb-6 text-sm text-muted-foreground">
-          The account will no longer be able to sign in. Sales they already recorded keep
-          their name in the audit trail. This cannot be undone.
-        </p>
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={deleteModal.closeFn}>
-            Cancel
-          </Button>
-          <Button
-            variant="destructive"
-            disabled={deleteMutation.isPending}
-            onClick={() => {
-              if (deleteModal.data) deleteMutation.mutate(deleteModal.data.id);
-            }}
-          >
-            {deleteMutation.isPending && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
-            Delete
-          </Button>
-        </div>
-      </Modal>
+      <ConfirmModal
+        state={deleteModal}
+        title="Delete staff account?"
+        description={(user) =>
+          `“${user?.username ?? "This account"}” will no longer be able to sign in. Existing transactions keep their audit trail. This cannot be undone.`
+        }
+        confirmLabel="Delete account"
+        isLoading={deleteMutation.isPending}
+        onConfirm={(user) => deleteMutation.mutate(user.id)}
+      />
     </div>
   );
 }
@@ -382,7 +367,7 @@ function StaffDialog({
               value={role}
               onChange={setRole}
               options={[
-                { label: "Cashier — POS checkout only", value: "cashier" },
+                { label: "Cashier — Dashboard, POS, Reports & Insights", value: "cashier" },
                 { label: "Admin — full access", value: "admin" },
               ]}
             />

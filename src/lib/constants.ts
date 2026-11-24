@@ -10,6 +10,13 @@ export const CATEGORIES = [
   { value: "fresh-meat", label: "Fresh Meat", emoji: "🥩" },
   { value: "processed-meat", label: "Processed Meat", emoji: "🌭" },
   { value: "biscuits", label: "Biscuits & Snacks", emoji: "🍪" },
+  { value: "dishwashing", label: "Dishwashing", emoji: "🧽" },
+  { value: "laundry", label: "Laundry & Fabric Care", emoji: "🧺" },
+  { value: "bath-body", label: "Bath & Body", emoji: "🧼" },
+  { value: "hair-care", label: "Hair Care", emoji: "🧴" },
+  { value: "school-supplies", label: "School Supplies", emoji: "✏️" },
+  { value: "liniments", label: "Liniments & Relief", emoji: "🩹" },
+  { value: "household", label: "Household Essentials", emoji: "🧹" },
   { value: "other", label: "Other", emoji: "📦" },
 ] as const;
 
@@ -53,14 +60,7 @@ export function expenseCategoryLabel(value: string): string {
 }
 
 /** Product cards visible on the public storefront by default. */
-export const FEATURED_CATEGORY_ORDER: readonly string[] = [
-  "canned-goods",
-  "rice",
-  "fresh-meat",
-  "processed-meat",
-  "biscuits",
-  "other",
-];
+export const FEATURED_CATEGORY_ORDER: readonly string[] = CATEGORIES.map((c) => c.value);
 
 /**
  * Currencies supported by the store Config (single source of truth — the

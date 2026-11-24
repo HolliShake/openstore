@@ -3,11 +3,12 @@
  * GET  /api/sales              (staff: list sales, optional ?week=current|prev|0..N)
  * POST /api/sales              (staff: record a new sale — admin or cashier)
  *
- * POST body: { items: [{productId, quantity}], payment?: string, customerName?: string,
- *              createdAt?: string, note?: string }
+ * POST body: { items: [{productId, quantity}], amount: number, payment?: string,
+ *              customerName?: string, createdAt?: string, note?: string }
  *   - Captures the sellPrice at time of sale.
  *   - Atomically decrements product.stock.
  *   - Rejects when stock insufficient.
+ *   - Validates amount received and returns any cash change due.
  *   - customerName is optional; blank/null = walk-in buyer.
  *   - createdAt is optional: for MANUAL entry of sales that happened earlier
  *     (e.g. recorded from a paper list after a power/internet outage). Must be
@@ -18,7 +19,15 @@
  */
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
-import { ok, created, badRequest, serverError, withStaff, readJson } from "@/lib/api";
+import {
+  ok,
+  created,
+  badRequest,
+  serverError,
+  unauthorized,
+  withStaff,
+  readJson,
+} from "@/lib/api";
 import { getAuthUser } from "@/lib/auth";
 import { weekRangeOffset } from "@/lib/format";
 import { paginationResult, parsePagination } from "@/lib/pagination";
@@ -58,6 +67,7 @@ export const GET = withStaff(async (req: NextRequest) => {
 
 type SalePayload = {
   items: { productId: string; quantity: number }[];
+  amount: number;
   payment?: string;
   customerName?: string;
   createdAt?: string;
@@ -78,6 +88,17 @@ export const POST = withStaff(async (req) => {
 
   // AUDIT: stamp the signed-in staff member (admin or cashier) on this sale.
   const user = await getAuthUser();
+  if (
+    user &&
+    !(await db.user.findUnique({
+      where: { id: user.id },
+      select: { id: true },
+    }))
+  ) {
+    return unauthorized(
+      "Your session refers to a staff account that no longer exists. Sign out and sign in again.",
+    );
+  }
 
   // Validate items + capture current sell price + check stock, all in one read.
   const productIds = data.items.map((i) => i.productId);
@@ -108,6 +129,17 @@ export const POST = withStaff(async (req) => {
   }
 
   const total = lines.reduce((s, l) => s + l.subtotal, 0);
+  if (!Number.isFinite(data.amount) || data.amount < 0)
+    return badRequest("amount must be a non-negative number");
+  const totalCents = Math.round(total * 100);
+  const amountCents = Math.round(data.amount * 100);
+  if (!Number.isSafeInteger(totalCents) || !Number.isSafeInteger(amountCents))
+    return badRequest("Sale amount is outside the supported range");
+  if (amountCents < totalCents)
+    return badRequest("Payment amount is insufficient");
+  if (payment === "gcash" && amountCents !== totalCents)
+    return badRequest("GCash amount must equal the sale total");
+  const change = payment === "cash" ? (amountCents - totalCents) / 100 : 0;
 
   // ---- Manual / backdated entry support ----
   // When the store loses power/internet, sales are written on paper and
@@ -165,7 +197,7 @@ export const POST = withStaff(async (req) => {
       );
       return created;
     });
-    return created(sale);
+    return created({ ...sale, amount: amountCents / 100, change });
   } catch (e) {
     return serverError("Failed to record sale", e);
   }

@@ -179,7 +179,7 @@ function NavList({
     <nav className="flex h-full flex-col gap-1 p-3">
       <div className="space-y-1">
         <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-          {role === "cashier" ? "Checkout" : "Manage"}
+          {role === "cashier" ? "Workspace" : "Manage"}
         </p>
         {sections.map((section) => {
           const Icon = section.icon;

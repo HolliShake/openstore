@@ -86,9 +86,6 @@ Open **http://localhost:3000** in your browser:
 
 The dev server hot-reloads on file changes. Database changes to
 `prisma/schema.prisma` require `bun run db:push` again.
-API requests intentionally wait 3 seconds in development to exercise loading states;
-production API requests are not delayed.
-
 ## Building & Hosting Locally (Production)
 
 The app is configured with `output: "standalone"`, so a production build is a

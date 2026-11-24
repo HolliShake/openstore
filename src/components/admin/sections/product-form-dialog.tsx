@@ -19,7 +19,8 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import Modal, { type ModalState } from "@/components/common/modal.component";
+import Modal, { useModal, type ModalState } from "@/components/common/modal.component";
+import ConfirmModal from "@/components/common/confirm.component";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -71,6 +72,7 @@ export function ProductFormDialog({
   const [imageData, setImageData] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const imageRemovalModal = useModal<string>();
 
   // Sync form when dialog opens.
   useEffect(() => {
@@ -189,6 +191,7 @@ export function ProductFormDialog({
   }
 
   return (
+    <>
     <Modal controller={controller} title={isEdit ? "Edit product" : "Add product"} size="2xl" closable>
       <div className="mb-5 rounded-xl border bg-muted/25 p-4">
         <p className="text-sm font-medium">
@@ -422,10 +425,7 @@ export function ProductFormDialog({
                   variant="ghost"
                   size="sm"
                   className="h-8 px-2 text-muted-foreground"
-                  onClick={() => {
-                    setImageUrl("");
-                    setImageData(null);
-                  }}
+                  onClick={() => imageRemovalModal.openFn("image")}
                   disabled={uploading}
                 >
                   <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Remove image
@@ -475,5 +475,17 @@ export function ProductFormDialog({
         </div>
       </form>
     </Modal>
+    <ConfirmModal
+      state={imageRemovalModal}
+      title="Remove product image?"
+      description="The image will be cleared from this product when you save your changes."
+      confirmLabel="Remove image"
+      onConfirm={() => {
+        setImageUrl("");
+        setImageData(null);
+        imageRemovalModal.closeFn();
+      }}
+    />
+    </>
   );
 }

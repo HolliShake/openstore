@@ -20,6 +20,8 @@ import { formatDateTime } from "@/lib/format";
 import { useMoney } from "@/hooks/use-money";
 import { EXPENSE_CATEGORIES, expenseCategoryLabel } from "@/lib/constants";
 import { toast } from "sonner";
+import { useModal } from "@/components/common/modal.component";
+import ConfirmModal from "@/components/common/confirm.component";
 
 type Expense = {
   id: string;
@@ -39,6 +41,7 @@ export function AdminExpenses() {
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState<string>("other");
   const [page, setPage] = useState(1);
+  const deleteModal = useModal<Expense>();
 
   const { data: expenses, isLoading } = useQuery<ExpensePage>({
     queryKey: [...queryKeys.expenses, page],
@@ -81,6 +84,7 @@ export function AdminExpenses() {
     },
     onSuccess: () => {
       toast.success("Expense deleted");
+      deleteModal.closeFn();
       qc.invalidateQueries({ queryKey: queryKeys.expenses });
       qc.invalidateQueries({ queryKey: queryKeys.dashboard() });
       if ((expenses?.items.length ?? 0) === 1 && page > 1) setPage(page - 1);
@@ -221,7 +225,7 @@ export function AdminExpenses() {
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-destructive hover:text-destructive"
-                    onClick={() => deleteMutation.mutate(expense.id)}
+                    onClick={() => deleteModal.openFn(expense)}
                     disabled={deleteMutation.isPending}
                     aria-label="Delete"
                   >
@@ -233,6 +237,16 @@ export function AdminExpenses() {
           />
         </CardContent>
       </Card>
+      <ConfirmModal
+        state={deleteModal}
+        title="Delete expense?"
+        description={(expense) =>
+          `Delete the expense “${expense?.description ?? ""}”? This cannot be undone.`
+        }
+        confirmLabel="Delete expense"
+        isLoading={deleteMutation.isPending}
+        onConfirm={(expense) => deleteMutation.mutate(expense.id)}
+      />
     </div>
   );
 }

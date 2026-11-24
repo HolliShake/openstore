@@ -39,7 +39,8 @@ import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
 import SelectInput from "@/components/common/select.component";
 import DataTable from "@/components/common/table.component";
-import { useModal } from "@/components/common/modal.component";
+import Modal, { useModal } from "@/components/common/modal.component";
+import ConfirmModal from "@/components/common/confirm.component";
 import { queryKeys } from "@/lib/query-client";
 import { DEFAULT_PAGE_SIZE, type PaginationResult } from "@/lib/pagination";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
@@ -80,6 +81,14 @@ type Sale = {
 
 type SalePage = PaginationResult<Sale>;
 
+type CheckoutResponse = {
+  id: string;
+  total: number;
+  payment: string;
+  amount: number;
+  change: number;
+};
+
 export function AdminPOS() {
   const { money } = useMoney(); // configured currency
   const qc = useQueryClient();
@@ -87,6 +96,7 @@ export function AdminPOS() {
   const [category, setCategory] = useState("all");
   const [cart, setCart] = useState<CartLine[]>([]);
   const [payment, setPayment] = useState("cash");
+  const [amountTendered, setAmountTendered] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [manualEntry, setManualEntry] = useState(false);
   const [saleAt, setSaleAt] = useState("");
@@ -94,6 +104,8 @@ export function AdminPOS() {
   const [salesPage, setSalesPage] = useState(1);
   const debouncedQuery = useDebouncedValue(query, 300);
   const scannerModal = useModal<void>();
+  const changeModal = useModal<CheckoutResponse>();
+  const removeCartModal = useModal<CartLine>();
 
   const { data: products, isLoading: productsLoading } = useQuery<
     PaginationResult<Product>
@@ -127,6 +139,7 @@ export function AdminPOS() {
   const checkoutMutation = useMutation({
     mutationFn: async (input: {
       items: { productId: string; quantity: number }[];
+      amount: number;
       payment: string;
       customerName?: string;
       createdAt?: string;
@@ -141,15 +154,12 @@ export function AdminPOS() {
         const e = await r.json();
         throw new Error(e.error ?? "Failed to record sale");
       }
-      return r.json();
+      return (await r.json()) as CheckoutResponse;
     },
-    onSuccess: (_data, variables) => {
-      toast.success(
-        variables.createdAt
-          ? "Manual sale recorded with the actual date/time! Stock updated."
-          : "Sale recorded! Stock updated.",
-      );
+    onSuccess: (result) => {
+      changeModal.openFn(result);
       setCart([]);
+      setAmountTendered("");
       setCustomerName("");
       setManualEntry(false);
       setSaleAt("");
@@ -163,6 +173,7 @@ export function AdminPOS() {
   });
 
   const total = cart.reduce((s, l) => s + l.product.sellPrice * l.quantity, 0);
+  const cartUnitCount = cart.reduce((count, line) => count + line.quantity, 0);
   const visibleProducts = products?.items ?? [];
 
   const addToCart = useCallback(
@@ -222,8 +233,11 @@ export function AdminPOS() {
     if (cart.length === 0) return toast.error("Cart is empty");
     if (manualEntry && !saleAt)
       return toast.error("Pick the actual date & time of the paper-recorded sale");
+    if (payment === "cash" && !amountTendered.trim())
+      return toast.error("Enter the cash amount received");
     checkoutMutation.mutate({
       items: cart.map((l) => ({ productId: l.product.id, quantity: l.quantity })),
+      amount: payment === "cash" ? Number(amountTendered) : total,
       payment,
       customerName: customerName.trim() || undefined,
       // Manual/offline entry: send the actual sale moment as ISO.
@@ -328,84 +342,125 @@ export function AdminPOS() {
         </Card>
 
         {/* Cart */}
-        <Card className="flex flex-col">
+        <Card className="flex min-h-0 flex-col">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <ShoppingCart className="h-4 w-4" /> Cart
               {cart.length > 0 && (
-                <Badge variant="secondary">{cart.length} item(s)</Badge>
+                <Badge variant="secondary">
+                  {cartUnitCount} {cartUnitCount === 1 ? "item" : "items"}
+                </Badge>
               )}
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-1 flex-col gap-3">
+          <CardContent className="flex min-h-0 flex-1 flex-col gap-3">
             {cart.length === 0 ? (
-              <div className="flex flex-1 flex-col items-center justify-center gap-2 py-12 text-center text-sm text-muted-foreground">
-                <ShoppingCart className="h-10 w-10 opacity-30" />
-                <p>Tap a product to add it.</p>
-                <p className="text-xs">Or use the barcode scanner for fast entry.</p>
+              <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-dashed bg-muted/20 px-5 py-10 text-center">
+                <div className="rounded-full bg-background p-3 ring-1 ring-border">
+                  <ShoppingCart className="h-6 w-6 text-muted-foreground/60" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">Your cart is empty</p>
+                  <p className="text-xs text-muted-foreground">
+                    Tap a product or scan its barcode to get started.
+                  </p>
+                </div>
               </div>
             ) : (
-              <ul className="flex-1 space-y-2 overflow-y-auto pr-1">
-                {cart.map((l) => (
-                  <li
-                    key={l.product.id}
-                    className="flex items-center gap-2 rounded-md border p-2"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate">{l.product.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {money(l.product.sellPrice)} × {l.quantity}
+              <ul className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+                {cart.map((l) => {
+                  const image = l.product.imageData ?? l.product.imageUrl;
+                  return (
+                    <li
+                      key={l.product.id}
+                      className="flex gap-3 rounded-xl border bg-background p-3 transition-colors hover:bg-muted/20"
+                    >
+                      <div className="flex size-14 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-muted">
+                        {image ? (
+                          <img
+                            src={image}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <Package className="h-5 w-5 text-muted-foreground/50" />
+                        )}
                       </div>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        className="h-7 w-7"
-                        onClick={() => updateQty(l.product.id, -1)}
-                        aria-label="Decrease"
-                      >
-                        <Minus className="h-3 w-3" />
-                      </Button>
-                      <span className="w-6 text-center text-sm tabular-nums">{l.quantity}</span>
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        className="h-7 w-7"
-                        onClick={() => updateQty(l.product.id, 1)}
-                        disabled={l.quantity >= l.product.stock}
-                        aria-label="Increase"
-                      >
-                        <Plus className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-7 w-7 text-destructive"
-                        onClick={() => updateQty(l.product.id, -l.quantity)}
-                        aria-label="Remove"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </li>
-                ))}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium">{l.product.name}</p>
+                            <p className="mt-0.5 text-xs text-muted-foreground">
+                              {money(l.product.sellPrice)} each
+                            </p>
+                          </div>
+                          <p className="shrink-0 text-sm font-semibold tabular-nums">
+                            {money(l.product.sellPrice * l.quantity)}
+                          </p>
+                        </div>
+                        <div className="mt-2 flex items-center justify-between gap-2">
+                          <div className="inline-flex items-center gap-1 rounded-lg border bg-muted/20 p-1">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7"
+                              onClick={() => updateQty(l.product.id, -1)}
+                              aria-label={`Decrease ${l.product.name} quantity`}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <span className="min-w-8 text-center text-sm font-medium tabular-nums">
+                              {l.quantity}
+                            </span>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7"
+                              onClick={() => updateQty(l.product.id, 1)}
+                              disabled={l.quantity >= l.product.stock}
+                              aria-label={`Increase ${l.product.name} quantity`}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => removeCartModal.openFn(l)}
+                            aria-label={`Remove ${l.product.name}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             )}
 
             <div className="space-y-2 border-t pt-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Total</span>
+              <div className="flex items-center justify-between rounded-xl bg-muted/35 px-3 py-2.5">
+                <div>
+                  <span className="block text-sm font-medium">Total</span>
+                  <span className="text-xs text-muted-foreground">
+                    {cartUnitCount} {cartUnitCount === 1 ? "item" : "items"}
+                  </span>
+                </div>
                 <span className="text-xl font-bold tabular-nums text-primary">
                   {money(total)}
                 </span>
               </div>
               <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">Customer:</span>
-                  <div className="relative flex-1">
+                <div className="grid grid-cols-[6rem_minmax(0,1fr)] items-center gap-2">
+                  <label htmlFor="customer-name" className="text-xs text-muted-foreground">
+                    Customer:
+                  </label>
+                  <div className="relative min-w-0">
                     <UserRound className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                     <Input
+                      id="customer-name"
                       value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
                       placeholder="Walk-in buyer (optional name)"
@@ -414,12 +469,15 @@ export function AdminPOS() {
                     />
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">Payment:</span>
+                <div className="grid grid-cols-[6rem_minmax(0,1fr)] items-center gap-2">
+                  <label htmlFor="payment-method" className="text-xs text-muted-foreground">
+                    Payment:
+                  </label>
                   <SelectInput
+                    id="payment-method"
                     value={payment}
                     onChange={setPayment}
-                    className="w-32"
+                    className="w-full"
                     size="default"
                     options={PAYMENT_METHODS.map((m) => ({
                       label: m.label,
@@ -427,6 +485,24 @@ export function AdminPOS() {
                     }))}
                   />
                 </div>
+                {payment === "cash" && (
+                  <div className="grid grid-cols-[6rem_minmax(0,1fr)] items-center gap-2">
+                    <label htmlFor="cash-amount" className="text-xs text-muted-foreground">
+                      Cash received:
+                    </label>
+                    <Input
+                      id="cash-amount"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={amountTendered}
+                      onChange={(e) => setAmountTendered(e.target.value)}
+                      placeholder="Amount"
+                      className="h-8 w-full text-xs"
+                      aria-label="Cash amount received"
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Manual / offline paper-record entry */}
@@ -568,6 +644,47 @@ export function AdminPOS() {
         </CardContent>
       </Card>
 
+      <Modal controller={changeModal} title="Sale complete" closable>
+        {changeModal.data && (
+          <div className="space-y-5">
+            <div className="rounded-xl border bg-primary/5 p-5 text-center">
+              <p className="text-sm text-muted-foreground">
+                {changeModal.data.payment === "cash" ? "Change due" : "Change"}
+              </p>
+              <p className="mt-1 text-4xl font-bold tabular-nums text-primary">
+                {money(changeModal.data.change)}
+              </p>
+            </div>
+            <dl className="space-y-2 rounded-lg border p-4 text-sm">
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted-foreground">Total</dt>
+                <dd className="font-medium tabular-nums">{money(changeModal.data.total)}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted-foreground">Amount received</dt>
+                <dd className="font-medium tabular-nums">{money(changeModal.data.amount)}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-muted-foreground">Payment method</dt>
+                <dd className="font-medium capitalize">{changeModal.data.payment}</dd>
+              </div>
+            </dl>
+            <Button className="w-full" onClick={changeModal.closeFn}>
+              Done
+            </Button>
+          </div>
+        )}
+      </Modal>
+      <ConfirmModal
+        state={removeCartModal}
+        title="Remove item from cart?"
+        description={(line) => `Remove ${line?.product.name ?? "this item"} from the current sale?`}
+        confirmLabel="Remove item"
+        onConfirm={(line) => {
+          updateQty(line.product.id, -line.quantity);
+          removeCartModal.closeFn();
+        }}
+      />
       <BarcodeScannerDialog controller={scannerModal} onDetected={handleBarcode} />
     </div>
   );

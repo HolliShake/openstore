@@ -43,9 +43,11 @@ function isValidImage(value: string): boolean {
 
 /** Fetch the singleton row, creating it with defaults on first access. */
 async function getOrCreateConfig() {
-  const existing = await db.config.findUnique({ where: { id: CONFIG_ID } });
-  if (existing) return existing;
-  return db.config.create({ data: { id: CONFIG_ID } });
+  return db.config.upsert({
+    where: { id: CONFIG_ID },
+    update: {},
+    create: { id: CONFIG_ID },
+  });
 }
 
 export async function GET() {
@@ -128,10 +130,16 @@ export const PUT = withAdmin(async (req: NextRequest) => {
     return badRequest("Nothing to update — provide at least one field");
 
   try {
-    await getOrCreateConfig(); // ensure the singleton row exists
-    const config = await db.config.update({
-      where: { id: CONFIG_ID },
-      data: update,
+    const config = await db.$transaction(async (tx) => {
+      await tx.config.upsert({
+        where: { id: CONFIG_ID },
+        update: {},
+        create: { id: CONFIG_ID },
+      });
+      return tx.config.update({
+        where: { id: CONFIG_ID },
+        data: update,
+      });
     });
     return ok(config);
   } catch (e) {

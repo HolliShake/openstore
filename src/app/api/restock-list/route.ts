@@ -1,6 +1,6 @@
 /**
  * OpenStore — Grocery / restock list API.
- * GET /api/restock-list?weeks=4&coverDays=14   (admin)
+ * GET /api/restock-list?weeks=4&coverDays=14   (signed-in staff)
  *
  * Answers: "What should I buy on my next grocery run, and in what order?"
  *
@@ -21,11 +21,11 @@
  */
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
-import { ok, serverError, withAdmin } from "@/lib/api";
+import { ok, serverError, withStaff } from "@/lib/api";
 
 export type RestockPriority = "critical" | "high" | "medium" | "low";
 
-export const GET = withAdmin(async (req: NextRequest) => {
+export const GET = withStaff(async (req: NextRequest) => {
   try {
     const url = new URL(req.url);
     const weeks = Math.max(1, Math.min(52, parseInt(url.searchParams.get("weeks") ?? "4", 10) || 4));

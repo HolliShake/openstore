@@ -4,11 +4,10 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Store, Loader2, ArrowLeft } from "lucide-react";
+import { Store, Loader2, ArrowLeft, ArrowRight, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { useStoreConfig } from "@/components/providers/config-provider";
 import { toast } from "sonner";
@@ -56,84 +55,174 @@ export function AdminLogin() {
   }
 
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-muted/50 to-background px-4 py-12">
-      <div className="absolute right-4 top-4">
+    <div className="relative min-h-screen overflow-hidden bg-background">
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -left-32 top-16 size-96 rounded-full bg-primary/5 blur-3xl" />
+        <div className="absolute -right-32 bottom-0 size-96 rounded-full bg-primary/5 blur-3xl" />
+      </div>
+
+      <header className="absolute inset-x-0 top-0 z-10 flex items-center justify-between px-4 py-4 sm:px-8">
+        <Link
+          href="/"
+          className="inline-flex h-10 items-center gap-2 rounded-full border bg-background/80 px-4 text-sm font-medium text-muted-foreground shadow-sm backdrop-blur transition-colors hover:bg-accent hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to store
+        </Link>
         <ThemeToggle />
-      </div>
-      <Link
-        href="/"
-        className="absolute left-4 top-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" /> Back to store
-      </Link>
+      </header>
 
-      <div className="mb-6 flex flex-col items-center gap-3 text-center">
-        {config.brandImage ? (
-          <img
-            src={config.brandImage}
-            alt=""
-            className="h-14 w-14 rounded-2xl object-cover shadow-lg"
-          />
-        ) : (
-          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg">
-            <Store className="h-7 w-7" />
-          </span>
-        )}
-        <div>
-          <h1 className="text-xl font-bold">{config.storeName} Staff</h1>
-          <p className="text-sm text-muted-foreground">
-            Sign in as admin or cashier
-          </p>
-        </div>
-      </div>
+      <main className="relative grid min-h-screen place-items-center px-4 pb-8 pt-20 sm:px-8">
+        <div className="grid w-full max-w-5xl overflow-hidden rounded-3xl border bg-card shadow-2xl shadow-black/5 lg:grid-cols-[1.05fr_0.95fr] dark:shadow-black/25">
+          <aside className="relative hidden min-h-[620px] flex-col justify-between overflow-hidden bg-gradient-to-br from-primary via-primary to-primary/85 p-10 text-primary-foreground lg:flex xl:p-14">
+            <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+              <div className="absolute -right-24 -top-20 size-80 rounded-full border border-primary-foreground/10" />
+              <div className="absolute -right-8 top-[-4rem] size-64 rounded-full border border-primary-foreground/10" />
+              <div className="absolute -bottom-40 -left-24 size-96 rounded-full bg-primary-foreground/5 blur-2xl" />
+            </div>
 
-      <Card className="w-full max-w-sm shadow-md">
-        <CardHeader>
-          <CardTitle className="text-lg">Sign in</CardTitle>
-          <CardDescription>
-            Cashiers land on the checkout screen; admins get the full dashboard.
-          </CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="username">Username</Label>
-              <Input
-                id="username"
-                name="username"
-                autoComplete="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="admin"
-                required
-              />
+            <div className="relative z-10 flex items-center gap-3">
+              {config.brandImage ? (
+                <img
+                  src={config.brandImage}
+                  alt=""
+                  className="size-12 rounded-2xl object-cover ring-1 ring-primary-foreground/20"
+                />
+              ) : (
+                <span className="flex size-12 items-center justify-center rounded-2xl bg-primary-foreground/10 ring-1 ring-primary-foreground/15">
+                  <Store className="h-6 w-6" />
+                </span>
+              )}
+              <div className="min-w-0">
+                <p className="truncate font-semibold">{config.storeName}</p>
+                <p className="text-sm text-primary-foreground/65">Staff workspace</p>
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-              />
+
+            <div className="relative z-10 max-w-md">
+              <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-primary-foreground/15 bg-primary-foreground/10 px-3 py-1.5 text-xs font-medium text-primary-foreground/80">
+                <span className="size-1.5 rounded-full bg-emerald-400" />
+                OpenStore staff portal
+              </p>
+              <h2 className="text-4xl font-semibold leading-tight tracking-tight xl:text-5xl">
+                Your store,
+                <br />
+                ready for today.
+              </h2>
+              <p className="mt-5 max-w-sm text-sm leading-6 text-primary-foreground/70">
+                Sign in to manage checkout, inventory, and daily operations from one place.
+              </p>
             </div>
-          </CardContent>
-          <CardFooter className="flex flex-col gap-3">
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {loading ? "Signing in…" : "Sign in"}
-            </Button>
-            <p className="text-center text-xs text-muted-foreground">
-              Admin default: <code className="font-mono">admin</code> /{" "}
-              <code className="font-mono">openstore2026</code>
+
+            <div className="relative z-10 flex items-center gap-2 text-sm text-primary-foreground/65">
+              <ShieldCheck className="h-4 w-4" />
+              Admin and cashier access
+            </div>
+          </aside>
+
+          <section className="flex flex-col justify-center p-6 sm:p-10 xl:p-14">
+            <div className="mb-8 flex items-center gap-3 lg:hidden">
+              {config.brandImage ? (
+                <img
+                  src={config.brandImage}
+                  alt=""
+                  className="size-11 rounded-xl object-cover shadow-sm"
+                />
+              ) : (
+                <span className="flex size-11 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+                  <Store className="h-5 w-5" />
+                </span>
+              )}
+              <div className="min-w-0">
+                <p className="truncate font-semibold">{config.storeName}</p>
+                <p className="text-xs text-muted-foreground">Staff workspace</p>
+              </div>
+            </div>
+
+            <div className="mb-8 space-y-2">
+              <p className="text-sm font-medium text-primary">Staff access</p>
+              <h1 className="text-3xl font-semibold tracking-tight">Welcome back</h1>
+              <p className="text-sm leading-6 text-muted-foreground">
+                Sign in as an admin or cashier to continue.
+              </p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="space-y-2">
+                <Label htmlFor="username">Username</Label>
+                <Input
+                  id="username"
+                  name="username"
+                  autoComplete="username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Enter your username"
+                  className="h-11 rounded-xl bg-background px-3.5"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  className="h-11 rounded-xl bg-background px-3.5"
+                  required
+                />
+              </div>
+              <Button
+                type="submit"
+                className="h-11 w-full rounded-xl text-sm font-semibold shadow-sm"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Signing in…
+                  </>
+                ) : (
+                  <>
+                    Sign in
+                    <ArrowRight className="ml-auto h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            </form>
+
+            <div className="mt-6 rounded-2xl border bg-muted/30 p-4">
+              <p className="text-sm font-medium">First time here?</p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                Use the seeded admin account to get started.
+              </p>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <div className="rounded-lg bg-background/80 px-3 py-2">
+                  <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                    Username
+                  </p>
+                  <code className="mt-0.5 block font-mono text-xs">admin</code>
+                </div>
+                <div className="rounded-lg bg-background/80 px-3 py-2">
+                  <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                    Password
+                  </p>
+                  <code className="mt-0.5 block break-all font-mono text-xs">
+                    openstore2026
+                  </code>
+                </div>
+              </div>
+            </div>
+
+            <p className="mt-8 text-center text-xs text-muted-foreground">
+              Cashiers use the account provided by your store admin.
             </p>
-          </CardFooter>
-        </form>
-      </Card>
+          </section>
+        </div>
+      </main>
     </div>
   );
 }
