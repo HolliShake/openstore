@@ -34,7 +34,6 @@ export const EXPENSE_CATEGORIES = [
 export const PAYMENT_METHODS = [
   { value: "cash", label: "Cash" },
   { value: "gcash", label: "GCash" },
-  { value: "card", label: "Card" },
 ] as const;
 
 export function categoryLabel(value: string): string {

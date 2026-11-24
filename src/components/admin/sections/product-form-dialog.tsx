@@ -450,7 +450,7 @@ export function ProductFormDialog({
           </div>
         </section>
 
-        <div className="sticky bottom-0 z-10 -mx-6 -mb-6 mt-5 flex flex-col-reverse gap-2 border-t bg-card/95 px-6 py-4 backdrop-blur sm:flex-row sm:justify-end">
+        <div className="-mx-6 -mb-6 mt-5 flex flex-col-reverse gap-2 border-t bg-muted/20 px-6 py-4 sm:flex-row sm:justify-end">
           <Button
             type="button"
             variant="outline"

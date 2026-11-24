@@ -22,6 +22,7 @@ import { ok, created, badRequest, serverError, withStaff, readJson } from "@/lib
 import { getAuthUser } from "@/lib/auth";
 import { weekRangeOffset } from "@/lib/format";
 import { paginationResult, parsePagination } from "@/lib/pagination";
+import { PAYMENT_METHODS } from "@/lib/constants";
 
 export const GET = withStaff(async (req: NextRequest) => {
   try {
@@ -71,6 +72,9 @@ export const POST = withStaff(async (req) => {
   if (error) return badRequest(error);
   if (!data || !Array.isArray(data.items) || data.items.length === 0)
     return badRequest("Sale must include at least one item");
+  const payment = data.payment ?? "cash";
+  if (!PAYMENT_METHODS.some((method) => method.value === payment))
+    return badRequest("payment must be cash or gcash");
 
   // AUDIT: stamp the signed-in staff member (admin or cashier) on this sale.
   const user = await getAuthUser();
@@ -128,7 +132,7 @@ export const POST = withStaff(async (req) => {
       const created = await tx.sale.create({
         data: {
           total,
-          payment: data.payment ?? "cash",
+          payment,
           // Optional buyer name; blank input means walk-in (null).
           customerName: data.customerName?.trim() ? data.customerName.trim() : null,
           // Audit note for manual/offline entries (e.g. "paper list, brownout").
