@@ -30,7 +30,8 @@ export type AdminSectionId =
   | "insights"
   | "reports"
   | "cashiers"
-  | "settings";
+  | "settings"
+  | "profile";
 
 export type AdminSection = {
   id: AdminSectionId;

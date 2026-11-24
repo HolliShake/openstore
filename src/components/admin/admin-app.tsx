@@ -15,6 +15,7 @@ import {
   Lightbulb,
   UserCog,
   Settings,
+  UserRound,
 } from "lucide-react";
 import { LoadingScreen } from "@/components/common/loading-screen";
 import { useStoreConfig } from "@/components/providers/config-provider";
@@ -35,6 +36,7 @@ const SECTIONS: AdminSection[] = [
   { id: "reports", label: "Reports", icon: FileText, description: "Printable weekly & price list" },
   { id: "cashiers", label: "Cashiers", icon: UserCog, description: "Add & manage cashier accounts" },
   { id: "settings", label: "Settings", icon: Settings, description: "Store name, images & tagline" },
+  { id: "profile", label: "Profile", icon: UserRound, description: "Personal details & password" },
 ];
 
 const CASHIER_SECTION_IDS = new Set<AdminSectionId>([
@@ -42,6 +44,7 @@ const CASHIER_SECTION_IDS = new Set<AdminSectionId>([
   "pos",
   "reports",
   "insights",
+  "profile",
 ]);
 
 export function AdminApp({ children }: { children: ReactNode }) {

@@ -2,7 +2,7 @@
  * OpenStore — NextAuth credentials provider.
  * Staff accounts with roles (see prisma/schema.prisma):
  *   - "admin"  : full access (inventory, reports, cashiers, POS, …)
- *   - "cashier": dashboard, POS, reports, and insights
+ *   - "cashier": dashboard, POS, reports, insights, and own profile
  * Seeded by scripts/seed.ts (admin) and managed in the Cashiers section.
  */
 import type { NextAuthOptions } from "next-auth";
@@ -40,11 +40,21 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id;
         token.username = user.username;
         token.role = user.role;
+      } else if (trigger === "update" && token.id) {
+        const currentUser = await db.user.findUnique({
+          where: { id: token.id },
+          select: { name: true, username: true, role: true },
+        });
+        if (currentUser) {
+          token.name = currentUser.name ?? currentUser.username;
+          token.username = currentUser.username;
+          token.role = currentUser.role;
+        }
       }
       return token;
     },
@@ -53,6 +63,7 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id ?? "";
         session.user.username = token.username ?? "";
         session.user.role = token.role ?? "admin";
+        session.user.name = token.name ?? token.username ?? "";
       }
       return session;
     },
