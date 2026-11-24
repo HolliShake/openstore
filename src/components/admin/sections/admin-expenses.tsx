@@ -15,6 +15,7 @@ import SelectInput from "@/components/common/select.component";
 import { Badge } from "@/components/ui/badge";
 import DataTable from "@/components/common/table.component";
 import { queryKeys } from "@/lib/query-client";
+import { DEFAULT_PAGE_SIZE, type PaginationResult } from "@/lib/pagination";
 import { formatDateTime } from "@/lib/format";
 import { useMoney } from "@/hooks/use-money";
 import { EXPENSE_CATEGORIES, expenseCategoryLabel } from "@/lib/constants";
@@ -29,17 +30,20 @@ type Expense = {
   createdAt: string;
 };
 
+type ExpensePage = PaginationResult<Expense> & { totalAmount: number };
+
 export function AdminExpenses() {
   const { money, symbol } = useMoney(); // configured currency
   const qc = useQueryClient();
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState<string>("other");
+  const [page, setPage] = useState(1);
 
-  const { data: expenses, isLoading } = useQuery<Expense[]>({
-    queryKey: queryKeys.expenses,
+  const { data: expenses, isLoading } = useQuery<ExpensePage>({
+    queryKey: [...queryKeys.expenses, page],
     queryFn: async () => {
-      const r = await fetch("/api/expenses");
+      const r = await fetch(`/api/expenses?page=${page}&pageSize=${DEFAULT_PAGE_SIZE}`);
       if (!r.ok) throw new Error("Failed to load expenses");
       return r.json();
     },
@@ -62,6 +66,7 @@ export function AdminExpenses() {
       toast.success("Expense recorded");
       qc.invalidateQueries({ queryKey: queryKeys.expenses });
       qc.invalidateQueries({ queryKey: queryKeys.dashboard() });
+      setPage(1);
       setDescription("");
       setAmount("");
       setCategory("other");
@@ -78,11 +83,12 @@ export function AdminExpenses() {
       toast.success("Expense deleted");
       qc.invalidateQueries({ queryKey: queryKeys.expenses });
       qc.invalidateQueries({ queryKey: queryKeys.dashboard() });
+      if ((expenses?.items.length ?? 0) === 1 && page > 1) setPage(page - 1);
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const total = (expenses ?? []).reduce((s, e) => s + e.amount, 0);
+  const total = expenses?.totalAmount ?? 0;
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -160,8 +166,14 @@ export function AdminExpenses() {
         </CardHeader>
         <CardContent>
           <DataTable
-            data={expenses ?? []}
+            data={expenses?.items ?? []}
             isLoading={isLoading}
+            pagination={{
+              page,
+              pageSize: DEFAULT_PAGE_SIZE,
+              total: expenses?.total ?? 0,
+              onPageChange: setPage,
+            }}
             emptyState={
               <p className="py-8 text-center text-sm text-muted-foreground">
                 No expenses recorded yet.

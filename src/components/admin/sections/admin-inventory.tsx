@@ -12,7 +12,7 @@
  *
  * Image column shows uploaded image or URL image, falling back to a placeholder.
  */
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -25,6 +25,8 @@ import DataTable from "@/components/common/table.component";
 import SelectInput from "@/components/common/select.component";
 import Modal, { useModal } from "@/components/common/modal.component";
 import { queryKeys } from "@/lib/query-client";
+import { DEFAULT_PAGE_SIZE, type PaginationResult } from "@/lib/pagination";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useMoney } from "@/hooks/use-money";
 import { CATEGORIES, categoryEmoji, categoryLabel } from "@/lib/constants";
 import { toast } from "sonner";
@@ -48,16 +50,30 @@ export function AdminInventory() {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [showInactive, setShowInactive] = useState(false);
+  const [page, setPage] = useState(1);
+  const debouncedQuery = useDebouncedValue(query, 300);
   const productModal = useModal<ProductFormValue>();
   const historyModal = useModal<PurchaseHistoryProduct>();
   const deleteModal = useModal<string>();
 
-  const { data: products, isLoading } = useQuery<Product[]>({
-    queryKey: [queryKeys.products, showInactive ? "with-inactive" : "active-only"],
+  const { data: products, isLoading } = useQuery<PaginationResult<Product>>({
+    queryKey: [
+      ...queryKeys.products,
+      "inventory",
+      page,
+      category,
+      debouncedQuery,
+      showInactive,
+    ],
     queryFn: async () => {
-      const r = await fetch(
-        `/api/products?includeInactive=${showInactive ? "1" : "0"}`,
-      );
+      const params = new URLSearchParams({
+        includeInactive: showInactive ? "1" : "0",
+        category,
+        page: String(page),
+        pageSize: String(DEFAULT_PAGE_SIZE),
+      });
+      if (debouncedQuery.trim()) params.set("q", debouncedQuery.trim());
+      const r = await fetch(`/api/products?${params}`);
       if (!r.ok) throw new Error("Failed to load products");
       return r.json();
     },
@@ -76,22 +92,6 @@ export function AdminInventory() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
-
-  const visible = useMemo(() => {
-    if (!products) return [];
-    return products.filter((p) => {
-      if (category !== "all" && p.category !== category) return false;
-      if (query.trim()) {
-        const q = query.trim().toLowerCase();
-        if (
-          !p.name.toLowerCase().includes(q) &&
-          !(p.barcode ?? "").toLowerCase().includes(q)
-        )
-          return false;
-      }
-      return true;
-    });
-  }, [products, query, category]);
 
   function openCreate() {
     productModal.openFn(undefined);
@@ -131,14 +131,20 @@ export function AdminInventory() {
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setPage(1);
+              }}
               placeholder="Search by name or barcode…"
               className="pl-9"
             />
           </div>
           <SelectInput
             value={category}
-            onChange={setCategory}
+            onChange={(value) => {
+              setCategory(value);
+              setPage(1);
+            }}
             className="w-full sm:w-48"
             options={[
               { label: "All categories", value: "all" },
@@ -151,7 +157,10 @@ export function AdminInventory() {
           <Button
             variant={showInactive ? "default" : "outline"}
             size="sm"
-            onClick={() => setShowInactive((v) => !v)}
+            onClick={() => {
+              setShowInactive((value) => !value);
+              setPage(1);
+            }}
           >
             {showInactive ? "Showing inactive" : "Hide inactive"}
           </Button>
@@ -162,8 +171,14 @@ export function AdminInventory() {
       <Card>
         <CardContent className="p-0">
           <DataTable
-            data={visible}
+            data={products?.items ?? []}
             isLoading={isLoading}
+            pagination={{
+              page,
+              pageSize: DEFAULT_PAGE_SIZE,
+              total: products?.total ?? 0,
+              onPageChange: setPage,
+            }}
             emptyState={
               <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
                 <Package className="h-10 w-10 text-muted-foreground/40" />

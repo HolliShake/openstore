@@ -13,19 +13,38 @@ import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { ok, created, badRequest, serverError, withAdmin, readJson } from "@/lib/api";
 import { getAuthUser } from "@/lib/auth";
+import { paginationResult, parsePagination } from "@/lib/pagination";
 
 const REASONS = ["spoilage", "damage", "expired", "missing", "other"];
 
 export const GET = withAdmin(async (req: NextRequest) => {
   try {
     const url = new URL(req.url);
+    const parsedPagination = parsePagination(url);
+    if (parsedPagination.error) return badRequest(parsedPagination.error);
+    const pagination = parsedPagination.pagination;
     const limit = Math.min(parseInt(url.searchParams.get("limit") ?? "200", 10) || 200, 500);
-    const items = await db.loss.findMany({
-      orderBy: { createdAt: "desc" },
-      take: limit,
-      include: { product: true },
+    const [items, total, lossValueRows] = await Promise.all([
+      db.loss.findMany({
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        take: pagination?.pageSize ?? limit,
+        ...(pagination ? { skip: pagination.skip } : {}),
+        include: { product: true },
+      }),
+      pagination ? db.loss.count() : Promise.resolve(0),
+      pagination
+        ? db.$queryRaw<{ totalLossValue: number }[]>`
+            SELECT COALESCE(SUM("unitCost" * "quantity"), 0) AS "totalLossValue"
+            FROM "Loss"
+          `
+        : Promise.resolve([]),
+    ]);
+    if (!pagination) return ok(items);
+
+    return ok({
+      ...paginationResult(items, total, pagination),
+      totalLossValue: lossValueRows[0]?.totalLossValue ?? 0,
     });
-    return ok(items);
   } catch (e) {
     return serverError("Failed to fetch losses", e);
   }

@@ -7,18 +7,26 @@
  *   ?category=canned-goods  filter by category
  *   ?q=rice                 search by name/barcode
  *   ?barcode=...            lookup by exact barcode (used by POS scanner)
+ *   ?inStock=1              only products with stock available
+ *   ?sort=name              order by product name
  *   ?includeInactive=1      (admin) include inactive products
  */
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { ok, created, badRequest, serverError, withAdmin, readJson } from "@/lib/api";
+import { paginationResult, parsePagination } from "@/lib/pagination";
 
 export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
+    const parsedPagination = parsePagination(url);
+    if (parsedPagination.error) return badRequest(parsedPagination.error);
+    const pagination = parsedPagination.pagination;
     const category = url.searchParams.get("category") ?? undefined;
     const q = url.searchParams.get("q") ?? undefined;
     const barcode = url.searchParams.get("barcode") ?? undefined;
+    const inStockOnly = url.searchParams.get("inStock") === "1";
+    const sortByName = url.searchParams.get("sort") === "name";
     const includeInactive = url.searchParams.get("includeInactive") === "1";
 
     const where: Record<string, unknown> = {};
@@ -28,17 +36,25 @@ export async function GET(req: NextRequest) {
       where.OR = [
         { name: { contains: q } },
         { barcode: { contains: q } },
-        { description: { contains: q } },
       ];
     }
+    if (inStockOnly) where.stock = { gt: 0 };
     if (!includeInactive) where.isActive = true;
 
-    const products = await db.product.findMany({
-      where,
-      orderBy: [{ category: "asc" }, { name: "asc" }],
-    });
+    const [products, total] = await Promise.all([
+      db.product.findMany({
+        where,
+        orderBy: sortByName
+          ? [{ name: "asc" }, { id: "asc" }]
+          : [{ category: "asc" }, { name: "asc" }, { id: "asc" }],
+        ...(pagination
+          ? { skip: pagination.skip, take: pagination.pageSize }
+          : {}),
+      }),
+      pagination ? db.product.count({ where }) : Promise.resolve(0),
+    ]);
 
-    return ok(products);
+    return ok(pagination ? paginationResult(products, total, pagination) : products);
   } catch (e) {
     return serverError("Failed to fetch products", e);
   }

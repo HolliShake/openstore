@@ -15,7 +15,7 @@
  *
  * Recent sales are shown underneath.
  */
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ScanLine,
@@ -41,6 +41,8 @@ import SelectInput from "@/components/common/select.component";
 import DataTable from "@/components/common/table.component";
 import { useModal } from "@/components/common/modal.component";
 import { queryKeys } from "@/lib/query-client";
+import { DEFAULT_PAGE_SIZE, type PaginationResult } from "@/lib/pagination";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { formatDateTime } from "@/lib/format";
 import { useMoney } from "@/hooks/use-money";
 import { CATEGORIES, categoryEmoji, categoryLabel, PAYMENT_METHODS } from "@/lib/constants";
@@ -76,6 +78,8 @@ type Sale = {
   items: { id: string }[];
 };
 
+type SalePage = PaginationResult<Sale>;
+
 export function AdminPOS() {
   const { money } = useMoney(); // configured currency
   const qc = useQueryClient();
@@ -87,21 +91,34 @@ export function AdminPOS() {
   const [manualEntry, setManualEntry] = useState(false);
   const [saleAt, setSaleAt] = useState("");
   const [note, setNote] = useState("");
+  const [salesPage, setSalesPage] = useState(1);
+  const debouncedQuery = useDebouncedValue(query, 300);
   const scannerModal = useModal<void>();
 
-  const { data: products, isLoading: productsLoading } = useQuery<Product[]>({
-    queryKey: queryKeys.products,
+  const { data: products, isLoading: productsLoading } = useQuery<
+    PaginationResult<Product>
+  >({
+    queryKey: [...queryKeys.products, "pos", debouncedQuery, category],
     queryFn: async () => {
-      const r = await fetch("/api/products");
+      const params = new URLSearchParams({
+        inStock: "1",
+        category,
+        page: "1",
+        pageSize: "24",
+      });
+      if (debouncedQuery.trim()) params.set("q", debouncedQuery.trim());
+      const r = await fetch(`/api/products?${params}`);
       if (!r.ok) throw new Error("Failed to load products");
       return r.json();
     },
   });
 
-  const { data: recentSales, isLoading: salesLoading } = useQuery<Sale[]>({
-    queryKey: queryKeys.sales,
+  const { data: recentSales, isLoading: salesLoading } = useQuery<SalePage>({
+    queryKey: [...queryKeys.sales, salesPage],
     queryFn: async () => {
-      const r = await fetch("/api/sales?limit=10");
+      const r = await fetch(
+        `/api/sales?page=${salesPage}&pageSize=${DEFAULT_PAGE_SIZE}`,
+      );
       if (!r.ok) throw new Error("Failed to load sales");
       return r.json();
     },
@@ -137,6 +154,7 @@ export function AdminPOS() {
       setManualEntry(false);
       setSaleAt("");
       setNote("");
+      setSalesPage(1);
       qc.invalidateQueries({ queryKey: queryKeys.sales });
       qc.invalidateQueries({ queryKey: queryKeys.products });
       qc.invalidateQueries({ queryKey: queryKeys.dashboard() });
@@ -144,22 +162,8 @@ export function AdminPOS() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const visibleProducts = useMemo(() => {
-    if (!products) return [];
-    const q = query.trim().toLowerCase();
-    return products
-      .filter((p) => p.stock > 0)
-      .filter((p) => category === "all" || p.category === category)
-      .filter(
-        (p) =>
-          !q ||
-          p.name.toLowerCase().includes(q) ||
-          (p.barcode ?? "").toLowerCase().includes(q),
-      )
-      .slice(0, 24);
-  }, [products, query, category]);
-
   const total = cart.reduce((s, l) => s + l.product.sellPrice * l.quantity, 0);
+  const visibleProducts = products?.items ?? [];
 
   const addToCart = useCallback(
     (product: Product, qty: number = 1) => {
@@ -178,22 +182,28 @@ export function AdminPOS() {
   );
 
   const handleBarcode = useCallback(
-    (barcode: string) => {
-      if (!products) return;
-      const found = products.find((p) => p.barcode && p.barcode === barcode);
-      if (!found) {
-        toast.error(`No product matches barcode "${barcode}"`);
-        return;
+    async (barcode: string) => {
+      try {
+        const r = await fetch(`/api/products?barcode=${encodeURIComponent(barcode)}`);
+        if (!r.ok) throw new Error("Failed to look up barcode");
+        const matches = (await r.json()) as Product[];
+        const found = matches[0];
+        if (!found) {
+          toast.error(`No product matches barcode "${barcode}"`);
+          return;
+        }
+        if (found.stock <= 0) {
+          toast.error(`"${found.name}" is out of stock`);
+          return;
+        }
+        addToCart(found, 1);
+        toast.success(`Added ${found.name}`);
+        scannerModal.closeFn();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Failed to look up barcode");
       }
-      if (found.stock <= 0) {
-        toast.error(`"${found.name}" is out of stock`);
-        return;
-      }
-      addToCart(found, 1);
-      toast.success(`Added ${found.name}`);
-      scannerModal.closeFn();
     },
-    [products, addToCart, scannerModal],
+    [addToCart, scannerModal],
   );
 
   function updateQty(productId: string, delta: number) {
@@ -484,8 +494,14 @@ export function AdminPOS() {
         </CardHeader>
         <CardContent>
           <DataTable
-            data={recentSales ?? []}
+            data={recentSales?.items ?? []}
             isLoading={salesLoading}
+            pagination={{
+              page: salesPage,
+              pageSize: DEFAULT_PAGE_SIZE,
+              total: recentSales?.total ?? 0,
+              onPageChange: setSalesPage,
+            }}
             emptyState={
               <p className="py-8 text-center text-sm text-muted-foreground">
                 No sales yet. Record your first sale above.

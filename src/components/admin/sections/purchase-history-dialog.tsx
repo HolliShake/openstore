@@ -9,12 +9,14 @@
  * prices?" — every batch is listed, and the blended weighted-average cost is
  * shown at the top.
  */
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { History, Store as StoreIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import DataTable from "@/components/common/table.component";
 import Modal, { type ModalState } from "@/components/common/modal.component";
 import { queryKeys } from "@/lib/query-client";
+import { DEFAULT_PAGE_SIZE, type PaginationResult } from "@/lib/pagination";
 import { formatDateTime } from "@/lib/format";
 import { useMoney } from "@/hooks/use-money";
 
@@ -35,6 +37,10 @@ type StockInRow = {
   createdAt: string;
 };
 
+type PurchaseHistoryPage = PaginationResult<StockInRow> & {
+  suppliers: string[];
+};
+
 export function PurchaseHistoryDialog({
   controller,
 }: {
@@ -43,23 +49,31 @@ export function PurchaseHistoryDialog({
   const { money } = useMoney(); // configured currency
   const open = controller.isOpen;
   const product = controller.data;
-  const { data: stockIns, isLoading } = useQuery<StockInRow[]>({
-    queryKey: queryKeys.stockIns,
+  const [pageState, setPageState] = useState<{ productId?: string; page: number }>({
+    page: 1,
+  });
+  const page = pageState.productId === product?.id ? pageState.page : 1;
+  const setPage = (nextPage: number) => {
+    setPageState({ productId: product?.id, page: nextPage });
+  };
+  const { data: stockIns, isLoading } = useQuery<PurchaseHistoryPage>({
+    queryKey: [...queryKeys.stockIns, "history", product?.id, page],
     queryFn: async () => {
-      const r = await fetch("/api/stock-in");
+      if (!product) throw new Error("No product selected");
+      const params = new URLSearchParams({
+        productId: product.id,
+        page: String(page),
+        pageSize: String(DEFAULT_PAGE_SIZE),
+      });
+      const r = await fetch(`/api/stock-in?${params}`);
       if (!r.ok) throw new Error("Failed to load purchase history");
       return r.json();
     },
     enabled: open && !!product,
   });
 
-  const rows = (stockIns ?? [])
-    .filter((s) => s.productId === product?.id)
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
-  const distinctSuppliers = Array.from(
-    new Set(rows.map((r) => r.supplier).filter(Boolean)),
-  ) as string[];
+  const rows = stockIns?.items ?? [];
+  const distinctSuppliers = stockIns?.suppliers ?? [];
 
   return (
     <Modal controller={controller} title="Purchase history" size="lg" closable>
@@ -107,6 +121,12 @@ export function PurchaseHistoryDialog({
         <DataTable
           data={rows}
           isLoading={isLoading}
+          pagination={{
+            page,
+            pageSize: DEFAULT_PAGE_SIZE,
+            total: stockIns?.total ?? 0,
+            onPageChange: setPage,
+          }}
           emptyState={
             <p className="py-8 text-center text-sm text-muted-foreground">
               No restocks recorded for this product yet. The current stock came from the

@@ -7,18 +7,34 @@ import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { ok, created, badRequest, serverError, withAdmin, readJson } from "@/lib/api";
 import { getAuthUser } from "@/lib/auth";
+import { paginationResult, parsePagination } from "@/lib/pagination";
 
 const CATEGORIES = ["utilities", "transport", "rent", "supplies", "other"];
 
 export const GET = withAdmin(async (req: NextRequest) => {
   try {
     const url = new URL(req.url);
+    const parsedPagination = parsePagination(url);
+    if (parsedPagination.error) return badRequest(parsedPagination.error);
+    const pagination = parsedPagination.pagination;
     const limit = Math.min(parseInt(url.searchParams.get("limit") ?? "200", 10) || 200, 500);
-    const items = await db.expense.findMany({
-      orderBy: { createdAt: "desc" },
-      take: limit,
+    const [items, total, amountAggregate] = await Promise.all([
+      db.expense.findMany({
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        take: pagination?.pageSize ?? limit,
+        ...(pagination ? { skip: pagination.skip } : {}),
+      }),
+      pagination ? db.expense.count() : Promise.resolve(0),
+      pagination
+        ? db.expense.aggregate({ _sum: { amount: true } })
+        : Promise.resolve(null),
+    ]);
+    if (!pagination) return ok(items);
+
+    return ok({
+      ...paginationResult(items, total, pagination),
+      totalAmount: amountAggregate?._sum.amount ?? 0,
     });
-    return ok(items);
   } catch (e) {
     return serverError("Failed to fetch expenses", e);
   }

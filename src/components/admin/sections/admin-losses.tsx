@@ -18,6 +18,7 @@ import SelectInput from "@/components/common/select.component";
 import { Badge } from "@/components/ui/badge";
 import DataTable from "@/components/common/table.component";
 import { queryKeys } from "@/lib/query-client";
+import { DEFAULT_PAGE_SIZE, type PaginationResult } from "@/lib/pagination";
 import { formatDateTime } from "@/lib/format";
 import { useMoney } from "@/hooks/use-money";
 import { LOSS_REASONS, lossReasonLabel } from "@/lib/constants";
@@ -44,6 +45,8 @@ type Loss = {
   product: Product;
 };
 
+type LossPage = PaginationResult<Loss> & { totalLossValue: number };
+
 export function AdminLosses() {
   const { money } = useMoney(); // configured currency
   const qc = useQueryClient();
@@ -51,21 +54,22 @@ export function AdminLosses() {
   const [quantity, setQuantity] = useState("");
   const [reason, setReason] = useState<string>("spoilage");
   const [note, setNote] = useState("");
+  const [page, setPage] = useState(1);
 
   const { data: products } = useQuery<Product[]>({
-    queryKey: queryKeys.products,
+    queryKey: [...queryKeys.products, "loss-options"],
     queryFn: async () => {
       // Active products only — inactive SKUs should not be loss-recordable.
-      const r = await fetch("/api/products");
+      const r = await fetch("/api/products?inStock=1&sort=name");
       if (!r.ok) throw new Error("Failed to load products");
       return r.json();
     },
   });
 
-  const { data: losses, isLoading } = useQuery<Loss[]>({
-    queryKey: queryKeys.losses,
+  const { data: losses, isLoading } = useQuery<LossPage>({
+    queryKey: [...queryKeys.losses, page],
     queryFn: async () => {
-      const r = await fetch("/api/losses");
+      const r = await fetch(`/api/losses?page=${page}&pageSize=${DEFAULT_PAGE_SIZE}`);
       if (!r.ok) throw new Error("Failed to load losses");
       return r.json();
     },
@@ -94,6 +98,7 @@ export function AdminLosses() {
       qc.invalidateQueries({ queryKey: queryKeys.losses });
       qc.invalidateQueries({ queryKey: queryKeys.products });
       qc.invalidateQueries({ queryKey: queryKeys.dashboard() });
+      setPage(1);
       setQuantity("");
       setNote("");
     },
@@ -101,7 +106,7 @@ export function AdminLosses() {
   });
 
   const selectedProduct = products?.find((p) => p.id === productId);
-  const totalLossValue = (losses ?? []).reduce((s, l) => s + l.unitCost * l.quantity, 0);
+  const totalLossValue = losses?.totalLossValue ?? 0;
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -139,10 +144,7 @@ export function AdminLosses() {
                 value={productId}
                 onChange={setProductId}
                 placeholder="Select product…"
-                options={(products ?? [])
-                  .filter((p) => p.stock > 0)
-                  .sort((a, b) => a.name.localeCompare(b.name))
-                  .map((p) => ({
+                options={(products ?? []).map((p) => ({
                     label: `${p.name} · stock ${p.stock}`,
                     value: p.id,
                   }))}
@@ -214,8 +216,14 @@ export function AdminLosses() {
         </CardHeader>
         <CardContent>
           <DataTable
-            data={losses ?? []}
+            data={losses?.items ?? []}
             isLoading={isLoading}
+            pagination={{
+              page,
+              pageSize: DEFAULT_PAGE_SIZE,
+              total: losses?.total ?? 0,
+              onPageChange: setPage,
+            }}
             emptyState={
               <p className="py-8 text-center text-sm text-muted-foreground">
                 No losses recorded yet.

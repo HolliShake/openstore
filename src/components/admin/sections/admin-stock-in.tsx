@@ -16,6 +16,7 @@ import SelectInput from "@/components/common/select.component";
 import { Badge } from "@/components/ui/badge";
 import DataTable from "@/components/common/table.component";
 import { queryKeys } from "@/lib/query-client";
+import { DEFAULT_PAGE_SIZE, type PaginationResult } from "@/lib/pagination";
 import { formatDateTime } from "@/lib/format";
 import { useMoney } from "@/hooks/use-money";
 import { categoryLabel } from "@/lib/constants";
@@ -56,21 +57,24 @@ export function AdminStockIn() {
   const [unitCost, setUnitCost] = useState("");
   const [supplier, setSupplier] = useState("");
   const [note, setNote] = useState("");
+  const [page, setPage] = useState(1);
 
   const { data: products } = useQuery<Product[]>({
-    queryKey: queryKeys.products,
+    queryKey: [...queryKeys.products, "restock-options"],
     queryFn: async () => {
       // Active products only — inactive SKUs should not be restockable.
-      const r = await fetch("/api/products");
+      const r = await fetch("/api/products?sort=name");
       if (!r.ok) throw new Error("Failed to load products");
       return r.json();
     },
   });
 
-  const { data: stockIns, isLoading } = useQuery<StockIn[]>({
-    queryKey: queryKeys.stockIns,
+  const { data: stockIns, isLoading } = useQuery<PaginationResult<StockIn>>({
+    queryKey: [...queryKeys.stockIns, "list", page],
     queryFn: async () => {
-      const r = await fetch("/api/stock-in");
+      const r = await fetch(
+        `/api/stock-in?page=${page}&pageSize=${DEFAULT_PAGE_SIZE}`,
+      );
       if (!r.ok) throw new Error("Failed to load stock-ins");
       return r.json();
     },
@@ -100,6 +104,7 @@ export function AdminStockIn() {
       qc.invalidateQueries({ queryKey: queryKeys.stockIns });
       qc.invalidateQueries({ queryKey: queryKeys.products });
       qc.invalidateQueries({ queryKey: queryKeys.dashboard() });
+      setPage(1);
       setQuantity("");
       setUnitCost("");
       setSupplier("");
@@ -153,7 +158,6 @@ export function AdminStockIn() {
                 onChange={onSelectChange}
                 placeholder="Select product…"
                 options={(products ?? [])
-                  .sort((a, b) => a.name.localeCompare(b.name))
                   .map((p) => ({
                     label: `${p.name} · ${categoryLabel(p.category)} · stock ${p.stock}`,
                     value: p.id,
@@ -244,8 +248,14 @@ export function AdminStockIn() {
         </CardHeader>
         <CardContent>
           <DataTable
-            data={stockIns ?? []}
+            data={stockIns?.items ?? []}
             isLoading={isLoading}
+            pagination={{
+              page,
+              pageSize: DEFAULT_PAGE_SIZE,
+              total: stockIns?.total ?? 0,
+              onPageChange: setPage,
+            }}
             emptyState={
               <p className="py-8 text-center text-sm text-muted-foreground">
                 No restocks recorded yet.

@@ -11,17 +11,40 @@ import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { ok, created, badRequest, serverError, withAdmin, readJson } from "@/lib/api";
 import { getAuthUser } from "@/lib/auth";
+import { paginationResult, parsePagination } from "@/lib/pagination";
 
 export const GET = withAdmin(async (req: NextRequest) => {
   try {
     const url = new URL(req.url);
+    const parsedPagination = parsePagination(url);
+    if (parsedPagination.error) return badRequest(parsedPagination.error);
+    const pagination = parsedPagination.pagination;
+    const productId = url.searchParams.get("productId") ?? undefined;
     const limit = Math.min(parseInt(url.searchParams.get("limit") ?? "100", 10) || 100, 500);
-    const items = await db.stockIn.findMany({
-      orderBy: { createdAt: "desc" },
-      take: limit,
-      include: { product: true },
+    const where = productId ? { productId } : {};
+    const [items, total, suppliers] = await Promise.all([
+      db.stockIn.findMany({
+        where,
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        take: pagination?.pageSize ?? limit,
+        ...(pagination ? { skip: pagination.skip } : {}),
+        include: { product: true },
+      }),
+      pagination ? db.stockIn.count({ where }) : Promise.resolve(0),
+      pagination && productId
+        ? db.stockIn.findMany({
+            where: { productId, supplier: { not: null } },
+            distinct: ["supplier"],
+            select: { supplier: true },
+          })
+        : Promise.resolve([]),
+    ]);
+    if (!pagination) return ok(items);
+
+    return ok({
+      ...paginationResult(items, total, pagination),
+      ...(productId ? { suppliers: suppliers.flatMap((item) => item.supplier ?? []) } : {}),
     });
-    return ok(items);
   } catch (e) {
     return serverError("Failed to fetch stock-ins", e);
   }

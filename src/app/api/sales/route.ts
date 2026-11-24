@@ -21,10 +21,14 @@ import { db } from "@/lib/db";
 import { ok, created, badRequest, serverError, withStaff, readJson } from "@/lib/api";
 import { getAuthUser } from "@/lib/auth";
 import { weekRangeOffset } from "@/lib/format";
+import { paginationResult, parsePagination } from "@/lib/pagination";
 
 export const GET = withStaff(async (req: NextRequest) => {
   try {
     const url = new URL(req.url);
+    const parsedPagination = parsePagination(url);
+    if (parsedPagination.error) return badRequest(parsedPagination.error);
+    const pagination = parsedPagination.pagination;
     const weekParam = url.searchParams.get("week");
     const limit = Math.min(parseInt(url.searchParams.get("limit") ?? "200", 10) || 200, 500);
 
@@ -35,13 +39,17 @@ export const GET = withStaff(async (req: NextRequest) => {
       where.createdAt = { gte: start, lt: end };
     }
 
-    const sales = await db.sale.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      take: limit,
-      include: { items: { include: { product: true } } },
-    });
-    return ok(sales);
+    const [sales, total] = await Promise.all([
+      db.sale.findMany({
+        where,
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        take: pagination?.pageSize ?? limit,
+        ...(pagination ? { skip: pagination.skip } : {}),
+        include: { items: { include: { product: true } } },
+      }),
+      pagination ? db.sale.count({ where }) : Promise.resolve(0),
+    ]);
+    return ok(pagination ? paginationResult(sales, total, pagination) : sales);
   } catch (e) {
     return serverError("Failed to fetch sales", e);
   }
