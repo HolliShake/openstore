@@ -50,5 +50,8 @@ test
 prompt
 
 server.log
+# Local-only runtime data
+/db/*.db
+/.zscripts/*.pid
 # Skills directory
 /skills/

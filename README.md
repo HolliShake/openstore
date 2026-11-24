@@ -22,8 +22,7 @@ report, customer price list, and a priority-ranked grocery/restock list.
 6. [Default Admin Account](#default-admin-account)
 7. [Useful Scripts](#useful-scripts)
 8. [Project Structure](#project-structure)
-9. [Hosting Behind a Reverse Proxy (Caddy)](#hosting-behind-a-reverse-proxy-caddy)
-10. [Troubleshooting](#troubleshooting)
+9. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -50,7 +49,7 @@ bun install            # or: npm install
 
 # 3. Create your .env file (see "Environment Variables" below)
 cat > .env <<'EOF'
-DATABASE_URL="file:./db/custom.db"
+DATABASE_URL="file:../db/custom.db"
 NEXTAUTH_SECRET="change-me-to-a-long-random-string"
 NEXTAUTH_URL="http://localhost:3000"
 EOF
@@ -60,7 +59,7 @@ bun run db:generate     # or: npx prisma generate
 bun run db:push         # or: npx prisma db push
 
 # 5. Seed the admin login account + default store config
-npm run seed          # or: bun run scripts/seed.ts
+npm run seed          # or: bun run seed
 
 # 6. (Optional) Seed demo products for a populated storefront
 bun run scripts/seed-products.ts
@@ -165,11 +164,15 @@ pm2 save && pm2 startup   # survive reboots
 
 | Variable | Required | Default | Purpose |
 | --- | --- | --- | --- |
-| `DATABASE_URL` | yes | — | SQLite path, e.g. `file:./db/custom.db` (relative to the repo root) |
+| `DATABASE_URL` | yes | — | SQLite path, e.g. `file:../db/custom.db` (relative to `prisma/schema.prisma`) |
 | `NEXTAUTH_SECRET` | production | dev fallback (insecure) | Secret used to sign auth session JWTs. **Set a long random string in production** (e.g. `openssl rand -base64 32`) |
 | `NEXTAUTH_URL` | production | `http://localhost:3000` | Canonical URL of the app (must match how users reach it, incl. port / proxy) |
 | `PORT` | no | `3000` | Server port |
 | `HOSTNAME` | no | `localhost` | Bind address (`0.0.0.0` for LAN access) |
+
+> **Vercel deployment:** This project currently stores data in a local SQLite
+> file. Vercel's function filesystem is not persistent, so production hosting
+> requires migrating Prisma to a persistent external database before deploying.
 
 ## Default Admin Account
 
@@ -228,23 +231,8 @@ private — the admin account controls products, stock, sales, and reports.
 │   │   ├── admin/            # Admin app (login, dashboard, POS, inventory, ...)
 │   │   └── reports/          # Printable views (weekly report, price list, restock list)
 │   └── lib/                  # db client, auth, api helpers, formatting, constants
-├── Caddyfile                 # Optional reverse-proxy config (see below)
 └── .env                      # Environment variables (not committed)
 ```
-
-## Hosting Behind a Reverse Proxy (Caddy)
-
-A `Caddyfile` is included for exposing the app on port 80/443 (e.g. on a LAN
-box or VPS). It proxies all traffic to the app on `localhost:3000`:
-
-```bash
-# install caddy, then from the project root:
-sudo caddy run --config Caddyfile
-```
-
-If you use a proxy or custom domain, remember to set
-`NEXTAUTH_URL` to the externally visible URL (e.g. `https://store.example.com`)
-so sign-in redirects work correctly.
 
 ## Troubleshooting
 

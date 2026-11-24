@@ -11,7 +11,7 @@
  *   username: admin
  *   password: openstore2026
  *
- * Run with: npm run seed   (or: bun run scripts/seed.ts)
+ * Run with: npm run seed   (or: bun run seed)
  */
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
