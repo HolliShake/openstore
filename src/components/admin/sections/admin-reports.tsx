@@ -40,7 +40,8 @@ export function AdminReports() {
               <CardTitle className="text-base">Weekly audit report</CardTitle>
             </div>
             <CardDescription>
-              One-page summary: revenue, COGS, gross profit, losses, expenses, net profit,
+              One-page summary: revenue, cost of products sold (COGS), gross profit, losses,
+              expenses, net profit,
               sales/loss/expense tables, and a stock-value snapshot.
             </CardDescription>
           </CardHeader>
@@ -131,14 +132,16 @@ export function AdminReports() {
             through the POS Checkout tab (quantity × sell price at time of sale).
           </p>
           <p>
-            <strong className="text-foreground">Cost of Goods (COGS)</strong> = for each item
-            sold, (weighted-average unit cost × quantity). Every stock-in blends its purchase
-            price into the product&apos;s average cost, so buying the same item at different
-            stores and different prices is fully covered. The cost is snapshotted onto each
-            sale, so historical reports never change.
+            <strong className="text-foreground">Cost of Goods Sold (COGS)</strong> — simply,
+            what the products you sold cost you. It is calculated for each item as
+            (weighted-average unit cost × quantity). Every stock-in blends its purchase price
+            into the product&apos;s average cost, so buying the same item at different stores
+            and different prices is fully covered. The cost is snapshotted onto each sale, so
+            historical reports never change.
           </p>
           <p>
-            <strong className="text-foreground">Gross profit</strong> = Revenue − COGS.
+            <strong className="text-foreground">Gross profit</strong> = Revenue − cost of
+            products sold (COGS).
           </p>
           <p>
             <strong className="text-foreground">Losses</strong> = sum of every Loss entry
@@ -146,8 +149,8 @@ export function AdminReports() {
             of loss. Use the Losses tab to record these as they happen.
           </p>
           <p>
-            <strong className="text-foreground">Expenses</strong> = sum of non-COGS costs
-            (utilities, transport, rent, supplies). Recorded in the Expenses tab.
+            <strong className="text-foreground">Expenses</strong> = costs beyond the products
+            themselves (utilities, transport, rent, supplies). Recorded in the Expenses tab.
           </p>
           <p>
             <strong className="text-foreground">Net profit</strong> = Gross profit − Losses −

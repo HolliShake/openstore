@@ -30,7 +30,7 @@ const SECTIONS: AdminSection[] = [
   { id: "pos", label: "POS / Checkout", icon: ScanLine, description: "Record a sale" },
   { id: "stock-in", label: "Stock-in", icon: Truck, description: "Record restock" },
   { id: "losses", label: "Losses", icon: AlertTriangle, description: "Spoilage / damage" },
-  { id: "expenses", label: "Expenses", icon: Wallet, description: "Non-COGS costs" },
+  { id: "expenses", label: "Expenses", icon: Wallet, description: "Rent, utilities & supplies" },
   { id: "insights", label: "Insights", icon: Lightbulb, description: "Best & slow sellers" },
   { id: "reports", label: "Reports", icon: FileText, description: "Printable weekly & price list" },
   { id: "cashiers", label: "Cashiers", icon: UserCog, description: "Add & manage cashier accounts" },

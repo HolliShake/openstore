@@ -181,7 +181,7 @@ export function AdminDashboard() {
           tone="pos"
         />
         <KpiCard
-          label="Cost of Goods"
+          label="Cost of products sold"
           value={money(weekly.cogs)}
           icon={<Coins className="h-4 w-4" />}
           tone="neutral"
@@ -314,7 +314,7 @@ export function AdminDashboard() {
                 />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 <Bar dataKey="revenue" name="Revenue" fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="cogs" name="COGS" fill="var(--chart-4)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="cogs" name="Cost of products sold (COGS)" fill="var(--chart-4)" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="losses" name="Losses" fill="var(--destructive)" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="expenses" name="Expenses" fill="var(--chart-2)" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="net" name="Net" fill="var(--chart-3)" radius={[4, 4, 0, 0]} />

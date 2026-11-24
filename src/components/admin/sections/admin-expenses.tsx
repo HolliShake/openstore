@@ -98,7 +98,7 @@ export function AdminExpenses() {
     <div className="space-y-6">
       <SectionHeading
         title="Expenses"
-        subtitle="Record non-COGS costs (utilities, transport, rent, supplies). These reduce net profit."
+        subtitle="Record operating costs beyond product purchases, such as utilities, transport, rent, and supplies. These reduce net profit."
       />
 
       <Card>
