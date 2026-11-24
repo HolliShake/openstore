@@ -26,6 +26,70 @@ control, and sales reporting.
 - **Roles:** Admins manage the store. Cashiers can use Dashboard, POS, Reports,
   Insights, and their own Profile.
 
+## Screenshots
+
+Browse the captured pages for each staff role.
+
+<details>
+<summary>Admin screenshots</summary>
+
+<table>
+<tr>
+<td><img src="./docs/admin/dashboard.png" alt="Admin dashboard" width="480" /><br /><strong>Dashboard</strong></td>
+<td><img src="./docs/admin/pos.png" alt="Admin point of sale" width="480" /><br /><strong>Point of sale</strong></td>
+</tr>
+<tr>
+<td><img src="./docs/admin/inventory.png" alt="Admin inventory" width="480" /><br /><strong>Inventory</strong></td>
+<td><img src="./docs/admin/stock-in.png" alt="Admin stock in" width="480" /><br /><strong>Stock-in</strong></td>
+</tr>
+<tr>
+<td><img src="./docs/admin/losses.png" alt="Admin losses" width="480" /><br /><strong>Losses</strong></td>
+<td><img src="./docs/admin/expenses.png" alt="Admin expenses" width="480" /><br /><strong>Expenses</strong></td>
+</tr>
+<tr>
+<td><img src="./docs/admin/reports.png" alt="Admin reports" width="480" /><br /><strong>Reports</strong></td>
+<td><img src="./docs/admin/insights.png" alt="Admin insights" width="480" /><br /><strong>Insights</strong></td>
+</tr>
+<tr>
+<td><img src="./docs/admin/price-list.png" alt="Admin price list" width="480" /><br /><strong>Price list</strong></td>
+<td><img src="./docs/admin/restock-list.png" alt="Admin restock list" width="480" /><br /><strong>Restock list</strong></td>
+</tr>
+<tr>
+<td><img src="./docs/admin/weekly-report.png" alt="Admin weekly report" width="480" /><br /><strong>Weekly report</strong></td>
+<td><img src="./docs/admin/cashiers.png" alt="Admin staff accounts" width="480" /><br /><strong>Staff accounts</strong></td>
+</tr>
+<tr>
+<td><img src="./docs/admin/profile.png" alt="Admin profile" width="480" /><br /><strong>Profile</strong></td>
+<td><img src="./docs/admin/settings.png" alt="Admin settings" width="480" /><br /><strong>Settings</strong></td>
+</tr>
+</table>
+
+</details>
+
+<details>
+<summary>Cashier screenshots</summary>
+
+<table>
+<tr>
+<td><img src="./docs/cashier/dashboard.png" alt="Cashier dashboard" width="480" /><br /><strong>Dashboard</strong></td>
+<td><img src="./docs/cashier/pos.png" alt="Cashier point of sale" width="480" /><br /><strong>Point of sale</strong></td>
+</tr>
+<tr>
+<td><img src="./docs/cashier/reports.png" alt="Cashier reports" width="480" /><br /><strong>Reports</strong></td>
+<td><img src="./docs/cashier/insights.png" alt="Cashier insights" width="480" /><br /><strong>Insights</strong></td>
+</tr>
+<tr>
+<td><img src="./docs/cashier/price-list.png" alt="Cashier price list" width="480" /><br /><strong>Price list</strong></td>
+<td><img src="./docs/cashier/restock-list.png" alt="Cashier restock list" width="480" /><br /><strong>Restock list</strong></td>
+</tr>
+<tr>
+<td><img src="./docs/cashier/weekly-report.png" alt="Cashier weekly report" width="480" /><br /><strong>Weekly report</strong></td>
+<td><img src="./docs/cashier/profile.png" alt="Cashier profile" width="480" /><br /><strong>Profile</strong></td>
+</tr>
+</table>
+
+</details>
+
 ## Requirements
 
 - [Bun](https://bun.sh/) (used by the project scripts and production start
