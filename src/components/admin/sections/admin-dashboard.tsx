@@ -336,7 +336,7 @@ export function AdminDashboard() {
               <CardDescription>What&apos;s flying off the shelf — keep stocked.</CardDescription>
             </div>
             <Button asChild variant="ghost" size="sm">
-              <Link href="/admin?tab=insights">
+              <Link href="/admin/insights">
                 Insights <ArrowRight className="ml-1 h-3 w-3" />
               </Link>
             </Button>
@@ -377,7 +377,7 @@ export function AdminDashboard() {
               <CardDescription>Zero sales but cash tied up — skip restock.</CardDescription>
             </div>
             <Button asChild variant="ghost" size="sm">
-              <Link href="/admin?tab=insights">
+              <Link href="/admin/insights">
                 Insights <ArrowRight className="ml-1 h-3 w-3" />
               </Link>
             </Button>
@@ -426,7 +426,7 @@ export function AdminDashboard() {
                 </Link>
               </Button>
               <Button asChild variant="ghost" size="sm">
-                <Link href="/admin?tab=inventory">
+                <Link href="/admin/inventory">
                   Manage <ArrowRight className="ml-1 h-3 w-3" />
                 </Link>
               </Button>
@@ -512,7 +512,7 @@ export function AdminDashboard() {
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <CardTitle className="text-base">Recent sales</CardTitle>
           <Button asChild variant="ghost" size="sm">
-            <Link href="/admin?tab=pos">
+            <Link href="/admin/pos">
               New sale <ArrowRight className="ml-1 h-3 w-3" />
             </Link>
           </Button>

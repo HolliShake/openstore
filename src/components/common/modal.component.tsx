@@ -168,7 +168,7 @@ export default function Modal<T>({
             >
               {title}
             </DialogTitle>
-            <div className="absolute right-4 w-[52px]" />
+            <div className="absolute right-4 w-13" />
           </div>
         )}
 

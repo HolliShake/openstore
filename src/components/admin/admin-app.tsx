@@ -1,17 +1,8 @@
 "use client";
 
-/**
- * OpenStore — Admin shell.
- *
- * The shell wraps the admin experience: a responsive sidebar with section
- * navigation, a topbar (theme toggle, store link, sign-out), and a content
- * area that renders the active section. The active section is driven by the
- * `tab` URL search param so it survives reloads and is shareable.
- *
- * The section components are lazy-rendered to keep the bundle per view small.
- */
+import type { ReactNode } from "react";
 import { useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
   LayoutDashboard,
@@ -26,20 +17,8 @@ import {
   Settings,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AdminDashboard } from "@/components/admin/sections/admin-dashboard";
-import { AdminInventory } from "@/components/admin/sections/admin-inventory";
-import { AdminPOS } from "@/components/admin/sections/admin-pos";
-import { AdminStockIn } from "@/components/admin/sections/admin-stock-in";
-import { AdminLosses } from "@/components/admin/sections/admin-losses";
-import { AdminExpenses } from "@/components/admin/sections/admin-expenses";
-import { AdminReports } from "@/components/admin/sections/admin-reports";
-import { AdminInsights } from "@/components/admin/sections/admin-insights";
-import { AdminCashiers } from "@/components/admin/sections/admin-cashiers";
-import { AdminSettings } from "@/components/admin/sections/admin-settings";
 import { useStoreConfig } from "@/components/providers/config-provider";
-import {
-  DashboardLayout,
-} from "@/components/admin/dashboard.layout";
+import { DashboardLayout } from "@/components/admin/dashboard.layout";
 import {
   type AdminSection,
   type AdminSectionId,
@@ -58,39 +37,28 @@ const SECTIONS: AdminSection[] = [
   { id: "settings", label: "Settings", icon: Settings, description: "Store name, images & tagline" },
 ];
 
-/** Sections a cashier may see — POS checkout only. */
-const CASHIER_SECTIONS: AdminSectionId[] = ["pos"];
-
-export function AdminApp() {
+export function AdminApp({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const params = useSearchParams();
+  const pathname = usePathname();
   const { config } = useStoreConfig();
 
-  const activeId = (params.get("tab") as AdminSectionId) ?? "dashboard";
+  const sectionSlug = pathname.split("/")[2];
+  const activeId =
+    SECTIONS.find((section) => section.id === sectionSlug)?.id ?? "dashboard";
   const role = session?.user?.role ?? "admin";
   const isCashier = role === "cashier";
-  // Cashiers are locked to the POS section; any other tab param is ignored.
-  const allowedIds = isCashier ? CASHIER_SECTIONS : SECTIONS.map((s) => s.id);
-  const effectiveId = allowedIds.includes(activeId) ? activeId : allowedIds[0];
+  const sections = isCashier ? SECTIONS.filter((section) => section.id === "pos") : SECTIONS;
 
-  // Guard: redirect to login if unauthenticated. We only redirect when status
-  // settles on "unauthenticated" — never on "loading" — so a brief session
-  // flicker (common right after sign-in while the cookie propagates) cannot
-  // bounce the user back to the login screen.
   useEffect(() => {
     if (status === "unauthenticated") {
       router.replace("/login");
+    } else if (status === "authenticated" && isCashier && activeId !== "pos") {
+      router.replace("/admin/pos");
     }
-  }, [status, router]);
+  }, [status, isCashier, activeId, router]);
 
-  function go(id: AdminSectionId) {
-    const url = new URL(window.location.href);
-    url.searchParams.set("tab", id);
-    router.replace(`/admin?${url.searchParams.toString()}`);
-  }
-
-  if (status === "loading" || !session) {
+  if (status === "loading" || !session || (isCashier && activeId !== "pos")) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Skeleton className="h-8 w-8 rounded-full" />
@@ -98,47 +66,18 @@ export function AdminApp() {
     );
   }
 
-  const active = SECTIONS.find((s) => s.id === effectiveId) ?? SECTIONS[0];
-  const sections = SECTIONS.filter((s) => allowedIds.includes(s.id));
+  const active = SECTIONS.find((section) => section.id === activeId) ?? SECTIONS[0];
 
   return (
     <DashboardLayout
       active={active}
-      activeId={effectiveId}
+      activeId={activeId}
       config={config}
-      onSelect={go}
       role={role}
       sections={sections}
       username={session.user?.name ?? session.user?.username ?? "admin"}
     >
-      <SectionRenderer id={effectiveId} />
+      {children}
     </DashboardLayout>
   );
-}
-
-function SectionRenderer({ id }: { id: AdminSectionId }) {
-  switch (id) {
-    case "dashboard":
-      return <AdminDashboard />;
-    case "inventory":
-      return <AdminInventory />;
-    case "pos":
-      return <AdminPOS />;
-    case "stock-in":
-      return <AdminStockIn />;
-    case "losses":
-      return <AdminLosses />;
-    case "expenses":
-      return <AdminExpenses />;
-    case "insights":
-      return <AdminInsights />;
-    case "reports":
-      return <AdminReports />;
-    case "cashiers":
-      return <AdminCashiers />;
-    case "settings":
-      return <AdminSettings />;
-    default:
-      return <AdminDashboard />;
-  }
 }

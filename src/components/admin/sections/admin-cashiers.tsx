@@ -116,7 +116,7 @@ export function AdminCashiers() {
               </p>
             }
             rowKey={(user) => user.id}
-            className="min-w-[640px]"
+            className="min-w-160"
             columns={[
               {
                 header: "Username",

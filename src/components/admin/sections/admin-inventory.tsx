@@ -101,7 +101,7 @@ export function AdminInventory() {
   }
   function restock(p: Product) {
     // No query param threading for product preselect (KISS) — user picks in Stock-in.
-    router.push("/admin?tab=stock-in");
+    router.push("/admin/stock-in");
     toast.info(`Pick "${p.name}" in the product dropdown to record restock.`);
   }
 
@@ -177,7 +177,7 @@ export function AdminInventory() {
               </div>
             }
             rowKey={(product) => product.id}
-            className="min-w-[680px]"
+            className="min-w-170"
             containerClassName="max-h-[600px]"
             columns={[
               {

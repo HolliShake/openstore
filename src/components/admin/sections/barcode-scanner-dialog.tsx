@@ -97,7 +97,7 @@ function Scanner({ onDetected }: { onDetected: (barcode: string) => void }) {
   }, []);
 
   return (
-    <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg bg-black">
+    <div className="relative aspect-3/4 w-full overflow-hidden rounded-lg bg-black">
       <video ref={videoRef} className="h-full w-full object-cover" muted playsInline />
       {/* Scan overlay */}
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center">

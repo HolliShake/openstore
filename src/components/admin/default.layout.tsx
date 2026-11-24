@@ -43,7 +43,6 @@ export type DefaultLayoutProps = {
   active: AdminSection;
   activeId: AdminSectionId;
   config: StoreConfig;
-  onSelect: (id: AdminSectionId) => void;
   role: string;
   sections: AdminSection[];
   username: string;
@@ -54,7 +53,6 @@ export function DefaultLayout({
   active,
   activeId,
   config,
-  onSelect,
   role,
   sections,
   username,
@@ -62,8 +60,7 @@ export function DefaultLayout({
 }: DefaultLayoutProps) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
-  function selectSection(id: AdminSectionId) {
-    onSelect(id);
+  function closeMobileNav() {
     setMobileNavOpen(false);
   }
 
@@ -101,7 +98,7 @@ export function DefaultLayout({
               </SheetHeader>
               <NavList
                 activeId={activeId}
-                onSelect={selectSection}
+                onNavigate={closeMobileNav}
                 username={username}
                 role={role}
                 sections={sections}
@@ -153,7 +150,7 @@ export function DefaultLayout({
         <aside className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-60 shrink-0 self-start overflow-y-auto border-r bg-muted/20 md:block">
           <NavList
             activeId={activeId}
-            onSelect={selectSection}
+            onNavigate={closeMobileNav}
             username={username}
             role={role}
             sections={sections}
@@ -167,13 +164,13 @@ export function DefaultLayout({
 
 function NavList({
   activeId,
-  onSelect,
+  onNavigate,
   username,
   role,
   sections,
 }: {
   activeId: AdminSectionId;
-  onSelect: (id: AdminSectionId) => void;
+  onNavigate: () => void;
   username: string;
   role: string;
   sections: AdminSection[];
@@ -188,9 +185,10 @@ function NavList({
           const Icon = section.icon;
           const isActive = activeId === section.id;
           return (
-            <button
+            <Link
               key={section.id}
-              onClick={() => onSelect(section.id)}
+              href={section.id === "dashboard" ? "/admin" : `/admin/${section.id}`}
+              onClick={onNavigate}
               className={cn(
                 "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
                 "hover:bg-accent hover:text-accent-foreground",
@@ -200,7 +198,7 @@ function NavList({
             >
               <Icon className="h-4 w-4" />
               <span>{section.label}</span>
-            </button>
+            </Link>
           );
         })}
       </div>

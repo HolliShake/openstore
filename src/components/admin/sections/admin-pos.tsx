@@ -264,7 +264,7 @@ export function AdminPOS() {
                 ]}
               />
             </div>
-            <div className="grid max-h-[420px] grid-cols-2 gap-2 overflow-y-auto pr-1 sm:grid-cols-3">
+            <div className="grid max-h-105 grid-cols-2 gap-2 overflow-y-auto pr-1 sm:grid-cols-3">
               {productsLoading ? (
                 /* Skeleton tile grid while the product list loads */
                 Array.from({ length: 9 }).map((_, i) => (
@@ -492,7 +492,7 @@ export function AdminPOS() {
               </p>
             }
             rowKey={(sale) => sale.id}
-            className="min-w-[640px]"
+            className="min-w-160"
             containerClassName="max-h-72 rounded-md"
             columns={[
               {

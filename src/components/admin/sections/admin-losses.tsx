@@ -178,7 +178,7 @@ export function AdminLosses() {
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 placeholder="Brief context (e.g. 'wet cardboard', 'past expiry date')"
-                className="min-h-[40px]"
+                className="min-h-10"
               />
             </div>
             <div className="flex items-end">
@@ -222,7 +222,7 @@ export function AdminLosses() {
               </p>
             }
             rowKey={(loss) => loss.id}
-            className="min-w-[680px]"
+            className="min-w-170"
             containerClassName="max-h-96 rounded-md"
             columns={[
               {

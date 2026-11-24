@@ -133,7 +133,7 @@ export function RestockListView() {
       <div className="sticky top-0 z-10 border-b border-zinc-200 bg-white/95 px-4 py-3 backdrop-blur print:hidden">
         <div className="mx-auto flex max-w-3xl items-center justify-between">
           <Link
-            href="/admin?tab=inventory"
+            href="/admin/inventory"
             className="inline-flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-900"
           >
             <ArrowLeft className="h-4 w-4" /> Back to admin

@@ -166,7 +166,7 @@ export function AdminInsights() {
               </p>
             }
             rowKey={(row) => row.productId}
-            className="min-w-[640px]"
+            className="min-w-160"
             containerClassName="max-h-96"
             columns={[
               {
@@ -255,7 +255,7 @@ export function AdminInsights() {
               </p>
             }
             rowKey={(row) => row.productId}
-            className="min-w-[760px]"
+            className="min-w-190"
             containerClassName="max-h-96"
             columns={[
               {

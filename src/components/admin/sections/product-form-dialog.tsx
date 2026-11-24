@@ -292,7 +292,7 @@ export function ProductFormDialog({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Brief description customers will see on the storefront"
-              className="min-h-[60px]"
+              className="min-h-15"
             />
           </div>
 
