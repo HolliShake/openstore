@@ -30,8 +30,7 @@ control, and sales reporting.
 
 Browse the captured pages for each staff role.
 
-<details>
-<summary>Admin screenshots</summary>
+### Admin screenshots
 
 <table>
 <tr>
@@ -64,10 +63,7 @@ Browse the captured pages for each staff role.
 </tr>
 </table>
 
-</details>
-
-<details>
-<summary>Cashier screenshots</summary>
+### Cashier screenshots
 
 <table>
 <tr>
@@ -87,8 +83,6 @@ Browse the captured pages for each staff role.
 <td><img src="./docs/cashier/profile.png" alt="Cashier profile" width="480" /><br /><strong>Profile</strong></td>
 </tr>
 </table>
-
-</details>
 
 ## Requirements
 
