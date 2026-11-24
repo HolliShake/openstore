@@ -274,7 +274,7 @@ export function AdminPOS() {
                 ]}
               />
             </div>
-            <div className="grid max-h-105 grid-cols-2 gap-2 overflow-y-auto pr-1 sm:grid-cols-3">
+            <div className="grid max-h-105 grid-cols-2 gap-2 overflow-y-auto p-1 sm:grid-cols-3">
               {productsLoading ? (
                 /* Skeleton tile grid while the product list loads */
                 Array.from({ length: 9 }).map((_, i) => (
@@ -295,7 +295,7 @@ export function AdminPOS() {
                     <button
                       key={p.id}
                       onClick={() => addToCart(p)}
-                      className="group flex flex-col gap-1 rounded-lg border p-2 text-left transition-all hover:border-primary/40 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                      className="group flex flex-col gap-1 rounded-lg border p-2 text-left transition-all hover:border-primary/40 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                     >
                       <div className="relative aspect-square w-full overflow-hidden rounded-md bg-muted">
                         {img ? (
