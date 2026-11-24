@@ -1,0 +1,171 @@
+// OpenStore — Prisma schema
+// Single-store inventory + revenue/loss tracking system.
+// All money fields are stored as Float (PHP). SQLite-backed.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// Store staff account. role: "admin" (full access) or "cashier"
+/// (POS checkout only). Auth via NextAuth credentials.
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String // bcrypt hash
+  name      String?
+  role      String   @default("admin")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sales    Sale[]
+  stockIns StockIn[]
+  losses   Loss[]
+  expenses Expense[]
+}
+
+/// A product / SKU sold at the store.
+model Product {
+  id                String   @id @default(cuid())
+  name              String
+  /// canned-goods | rice | fresh-meat | processed-meat | biscuits | other
+  category          String   @default("other")
+  /// Optional scanned barcode (EAN/UPC/Code128). Used by POS scanner.
+  barcode           String?  @unique
+  /// Last-known purchase cost per unit (PHP).
+  unitCost          Float    @default(0)
+  /// Selling price per unit (PHP).
+  sellPrice         Float    @default(0)
+  /// Current on-hand quantity.
+  stock             Int      @default(0)
+  /// When stock <= threshold, the dashboard raises a low-stock alert.
+  lowStockThreshold Int      @default(5)
+  /// Optional image URL (supplier image, etc).
+  imageUrl          String?
+  /// Optional base64-encoded uploaded image (data URL).
+  imageData         String?
+  description       String?
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  saleItems SaleItem[]
+  stockIns  StockIn[]
+  losses    Loss[]
+}
+
+/// A single customer sale (POS checkout). One sale = many SaleItem.
+model Sale {
+  id        String   @id @default(cuid())
+  /// Total sale amount in PHP (sum of items.subtotal).
+  total     Float
+  /// Optional payment method for record-keeping.
+  payment   String   @default("cash")
+  /// Optional customer name for record-keeping. Null = walk-in buyer.
+  customerName String?
+  /// Optional audit note — e.g. "recorded from paper list, brownout Nov 22"
+  /// for sales manually entered after a power/internet outage.
+  note         String?
+  /// Who recorded this sale — admin or cashier (audit trail).
+  userId       String?
+  user         User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  /// Display-name snapshot of the user at time of sale. Survives user
+  /// deletion/rename so historical audit records stay readable.
+  createdBy    String?
+  createdAt DateTime @default(now())
+
+  items SaleItem[]
+}
+
+/// A line item on a sale.
+model SaleItem {
+  id        String @id @default(cuid())
+  saleId    String
+  sale      Sale   @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  /// Selling price captured at time of sale (PHP).
+  unitPrice Float
+  /// Cost per unit captured at time of sale — the product's weighted-average
+  /// cost at that moment (PHP). Keeps COGS exact even when the same product
+  /// was bought at different prices from different suppliers.
+  unitCost  Float @default(0)
+  /// unitPrice * quantity
+  subtotal  Float
+}
+
+/// A restock / refill event. Updates product.stock and product.unitCost (weighted).
+model StockIn {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int
+  /// Purchase cost per unit (PHP).
+  unitCost  Float
+  supplier  String?
+  note      String?
+  /// Who recorded this restock (admin) — audit trail.
+  userId    String?
+  user      User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdBy String?
+  createdAt DateTime @default(now())
+}
+
+/// A loss event (spoilage, damage, expired, missing/unsold).
+model Loss {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int
+  /// spoilage | damage | expired | missing | other
+  reason    String   @default("spoilage")
+  note      String?
+  /// Cost value at time of loss = product.unitCost * quantity (PHP).
+  unitCost  Float
+  /// Who recorded this loss (admin) — audit trail.
+  userId    String?
+  user      User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdBy String?
+  createdAt DateTime @default(now())
+}
+
+/// Store configuration — a SINGLE row (singleton, id "store-config").
+/// Holds the branding shown on the public storefront and admin shell.
+/// Nullable image fields fall back to built-in defaults in the UI
+/// (Store icon for brandImage, gradient hero for bannerImage).
+model Config {
+  id          String   @id @default("store-config")
+  /// Display name of the store (header, hero, footer, page title).
+  storeName   String   @default("OpenStore")
+  /// Small subtitle under the store name (e.g. "Neighborhood Store").
+  subtitle    String   @default("Neighborhood Store")
+  /// Optional brand logo image URL (data URL or remote). Null = default icon.
+  brandImage  String?
+  /// Optional hero banner image URL. Null = default gradient hero.
+  bannerImage String?
+  /// Welcome text / tagline shown on the storefront hero.
+  welcomeText String   @default("Browse what's on the shelf today. Prices updated in real time from our inventory system. Drop by the store to pick up your essentials.")
+  /// ISO 4217 currency code used for ALL money display (see
+  /// SUPPORTED_CURRENCIES in src/lib/constants.ts). Default: PHP.
+  currency    String   @default("PHP")
+  updatedAt   DateTime @updatedAt
+}
+
+/// A non-COGS expense (utilities, transport, etc).
+model Expense {
+  id          String   @id @default(cuid())
+  description String
+  amount      Float
+  /// utilities | transport | rent | supplies | other
+  category    String   @default("other")
+  /// Who recorded this expense (admin) — audit trail.
+  userId      String?
+  user        User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdBy   String?
+  createdAt   DateTime @default(now())
+}
