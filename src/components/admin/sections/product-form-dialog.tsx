@@ -10,7 +10,15 @@
  * The dialog is controlled — parent opens it with an optional product payload.
  */
 import { useEffect, useState } from "react";
-import { Loader2, Upload, Link as LinkIcon } from "lucide-react";
+import {
+  CircleDollarSign,
+  ImageIcon,
+  Loader2,
+  Link as LinkIcon,
+  Package,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import Modal, { type ModalState } from "@/components/common/modal.component";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -182,21 +190,46 @@ export function ProductFormDialog({
 
   return (
     <Modal controller={controller} title={isEdit ? "Edit product" : "Add product"} size="2xl" closable>
-        <div className="mb-4 text-sm text-muted-foreground">
+      <div className="mb-5 rounded-xl border bg-muted/25 p-4">
+        <p className="text-sm font-medium">
+          {isEdit ? "Keep your catalog up to date" : "Add a product to your catalog"}
+        </p>
+        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
           {isEdit
-            ? "Update product details, pricing, and stock."
-            : "Fill in the product details. You can save and edit later."}
-        </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Basics */}
-          <div className="grid gap-3 sm:grid-cols-2">
+            ? "Update product details and pricing. Record restocks separately to adjust stock."
+            : "Add the details your team needs to identify, price, and track this product."}
+        </p>
+      </div>
+
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-4"
+        aria-busy={saving || uploading}
+      >
+        <section aria-labelledby="product-details-heading" className="rounded-xl border p-4 sm:p-5">
+          <div className="mb-4 flex items-start gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Package className="h-4 w-4" aria-hidden="true" />
+            </span>
+            <div>
+              <h2 id="product-details-heading" className="text-sm font-semibold">
+                Product details
+              </h2>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Name, category, and optional barcode.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="pf-name">Name *</Label>
+              <Label htmlFor="pf-name">Product name <span className="text-destructive">*</span></Label>
               <Input
                 id="pf-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Lucky Me Pancit Canton"
+                autoFocus
                 required
               />
             </div>
@@ -212,40 +245,42 @@ export function ProductFormDialog({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="pf-barcode">Barcode (optional)</Label>
+              <Label htmlFor="pf-barcode">Barcode <span className="font-normal text-muted-foreground">(optional)</span></Label>
               <Input
                 id="pf-barcode"
                 value={barcode}
                 onChange={(e) => setBarcode(e.target.value)}
-                placeholder="Scan or type the product barcode"
+                placeholder="Scan or type barcode"
+                autoComplete="off"
               />
             </div>
           </div>
+        </section>
 
-          {/* Pricing + stock */}
-          <div className="grid gap-3 sm:grid-cols-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="pf-cost">Avg unit cost ({symbol})</Label>
-              <Input
-                id="pf-cost"
-                type="number"
-                min="0"
-                step="0.01"
-                value={unitCost}
-                onChange={(e) => setUnitCost(e.target.value)}
-                placeholder="0.00"
-              />
-              <p className="text-[10px] text-muted-foreground">
-                Updates automatically (weighted average) when you record restocks.
+        <section aria-labelledby="pricing-stock-heading" className="rounded-xl border p-4 sm:p-5">
+          <div className="mb-4 flex items-start gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <CircleDollarSign className="h-4 w-4" aria-hidden="true" />
+            </span>
+            <div>
+              <h2 id="pricing-stock-heading" className="text-sm font-semibold">
+                Pricing & inventory
+              </h2>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Set selling price and low-stock alerts.
               </p>
             </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="pf-price">Sell price ({symbol}) *</Label>
+              <Label htmlFor="pf-price">Sell price ({symbol}) <span className="text-destructive">*</span></Label>
               <Input
                 id="pf-price"
                 type="number"
                 min="0"
                 step="0.01"
+                inputMode="decimal"
                 value={sellPrice}
                 onChange={(e) => setSellPrice(e.target.value)}
                 placeholder="0.00"
@@ -253,128 +288,191 @@ export function ProductFormDialog({
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="pf-stock">Stock</Label>
+              <Label htmlFor="pf-cost">Average unit cost ({symbol})</Label>
+              <Input
+                id="pf-cost"
+                type="number"
+                min="0"
+                step="0.01"
+                inputMode="decimal"
+                value={unitCost}
+                onChange={(e) => setUnitCost(e.target.value)}
+                placeholder="0.00"
+              />
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                Updated automatically when you record restocks.
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="pf-stock">Starting stock</Label>
               <Input
                 id="pf-stock"
                 type="number"
                 min="0"
                 step="1"
+                inputMode="numeric"
                 value={stock}
                 onChange={(e) => setStock(e.target.value)}
                 placeholder="0"
                 disabled={isEdit}
               />
-              {isEdit && (
-                <p className="text-[10px] text-muted-foreground">
-                  Use Stock-in tab to adjust stock.
-                </p>
-              )}
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                {isEdit ? "Use Stock-in to adjust current stock." : "You can record more stock later."}
+              </p>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="pf-threshold">Low-stock at</Label>
+              <Label htmlFor="pf-threshold">Low-stock alert at</Label>
               <Input
                 id="pf-threshold"
                 type="number"
                 min="0"
                 step="1"
+                inputMode="numeric"
                 value={threshold}
                 onChange={(e) => setThreshold(e.target.value)}
                 placeholder="5"
               />
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                Alert when stock reaches this amount.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section aria-labelledby="product-description-heading" className="rounded-xl border p-4 sm:p-5">
+          <div className="mb-3">
+            <h2 id="product-description-heading" className="text-sm font-semibold">
+              Storefront description
+            </h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Optional details customers can see when browsing.
+            </p>
+          </div>
+          <Textarea
+            id="pf-desc"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Add a short product description"
+            className="min-h-20"
+          />
+        </section>
+
+        <section aria-labelledby="product-image-heading" className="rounded-xl border p-4 sm:p-5">
+          <div className="mb-3 flex items-start gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <ImageIcon className="h-4 w-4" aria-hidden="true" />
+            </span>
+            <div>
+              <h2 id="product-image-heading" className="text-sm font-semibold">
+                Product image
+              </h2>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Add an image to help identify the product in your catalog.
+              </p>
             </div>
           </div>
 
-          {/* Description */}
-          <div className="space-y-1.5">
-            <Label htmlFor="pf-desc">Description (optional)</Label>
-            <Textarea
-              id="pf-desc"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Brief description customers will see on the storefront"
-              className="min-h-15"
-            />
-          </div>
+          <Tabs value={imageMode} onValueChange={(value) => setImageMode(value as "upload" | "url")}>
+            <TabsList className="mb-3 grid w-full grid-cols-2 sm:w-fit">
+              <TabsTrigger value="upload">
+                <Upload className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" /> Upload
+              </TabsTrigger>
+              <TabsTrigger value="url">
+                <LinkIcon className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" /> Image URL
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
 
-          {/* Image */}
-          <div className="space-y-2">
-            <Label>Product image</Label>
-            <Tabs value={imageMode} onValueChange={(v) => setImageMode(v as "upload" | "url")}>
-              <TabsList>
-                <TabsTrigger value="upload" className="text-xs">
-                  <Upload className="mr-1 h-3.5 w-3.5" /> Upload
-                </TabsTrigger>
-                <TabsTrigger value="url" className="text-xs">
-                  <LinkIcon className="mr-1 h-3.5 w-3.5" /> URL
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-
-            <div className="grid gap-3 sm:grid-cols-[1fr_120px]">
+          <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_8rem] sm:items-start">
+            <div className="min-w-0 space-y-2">
               {imageMode === "upload" ? (
-                <div className="space-y-1.5">
-                  <Input
-                    key="image-upload"
-                    type="file"
-                    accept="image/png,image/jpeg,image/webp,image/gif"
-                    disabled={uploading}
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) handleUpload(f);
-                    }}
-                  />
-                  {uploading && (
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      <Loader2 className="h-3 w-3 animate-spin" /> Uploading…
-                    </p>
-                  )}
-                </div>
+                <Input
+                  key="image-upload"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  disabled={uploading}
+                  aria-label="Upload product image"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleUpload(file);
+                  }}
+                />
               ) : (
-                <div className="space-y-1.5">
-                  <Input
-                    key="image-url"
-                    type="url"
-                    value={imageUrl}
-                    onChange={(e) => {
-                      setImageUrl(e.target.value);
-                      setImageData(null);
-                    }}
-                    placeholder="https://example.com/product.jpg"
-                  />
+                <Input
+                  key="image-url"
+                  id="pf-image-url"
+                  type="url"
+                  value={imageUrl}
+                  onChange={(e) => {
+                    setImageUrl(e.target.value);
+                    setImageData(null);
+                  }}
+                  placeholder="https://example.com/product.jpg"
+                  aria-label="Product image URL"
+                />
+              )}
+              {uploading && (
+                <p role="status" className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Uploading image…
+                </p>
+              )}
+              {(imageUrl || imageData) && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 text-muted-foreground"
+                  onClick={() => {
+                    setImageUrl("");
+                    setImageData(null);
+                  }}
+                  disabled={uploading}
+                >
+                  <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Remove image
+                </Button>
+              )}
+            </div>
+
+            <div className="aspect-square w-32 overflow-hidden rounded-lg border bg-muted sm:w-full">
+              {imageUrl || imageData ? (
+                <img
+                  src={imageUrl || imageData || ""}
+                  alt="Product preview"
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full flex-col items-center justify-center gap-2 text-xs text-muted-foreground">
+                  <ImageIcon className="h-6 w-6 opacity-40" aria-hidden="true" />
+                  No image yet
                 </div>
               )}
-              {/* Preview */}
-              <div className="aspect-square w-full overflow-hidden rounded-md border bg-muted">
-                {imageUrl ? (
-                  <img
-                    src={imageUrl}
-                    alt="Product preview"
-                    className="h-full w-full object-cover"
-                  />
-                ) : imageData ? (
-                  <img
-                    src={imageData}
-                    alt="Product preview"
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
-                    No image
-                  </div>
-                )}
-              </div>
             </div>
           </div>
+        </section>
 
-          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <Button type="button" variant="outline" onClick={controller.closeFn}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={saving}>
-              {saving && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
-              {isEdit ? "Save changes" : "Create product"}
-            </Button>
-          </div>
+        <div className="sticky bottom-0 z-10 -mx-6 -mb-6 mt-5 flex flex-col-reverse gap-2 border-t bg-card/95 px-6 py-4 backdrop-blur sm:flex-row sm:justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={controller.closeFn}
+            disabled={saving}
+            className="sm:min-w-24"
+          >
+            Cancel
+          </Button>
+          <Button type="submit" disabled={saving || uploading} className="sm:min-w-36">
+            {saving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving…
+              </>
+            ) : isEdit ? (
+              "Save changes"
+            ) : (
+              "Create product"
+            )}
+          </Button>
+        </div>
       </form>
     </Modal>
   );
