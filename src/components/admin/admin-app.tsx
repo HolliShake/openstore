@@ -16,7 +16,7 @@ import {
   UserCog,
   Settings,
 } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingScreen } from "@/components/common/loading-screen";
 import { useStoreConfig } from "@/components/providers/config-provider";
 import { DashboardLayout } from "@/components/admin/dashboard.layout";
 import {
@@ -59,11 +59,13 @@ export function AdminApp({ children }: { children: ReactNode }) {
   }, [status, isCashier, activeId, router]);
 
   if (status === "loading" || !session || (isCashier && activeId !== "pos")) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <Skeleton className="h-8 w-8 rounded-full" />
-      </div>
-    );
+    const loadingMessage =
+      status === "loading"
+        ? "Checking your session"
+        : !session
+          ? "Redirecting to sign in"
+          : "Opening checkout";
+    return <LoadingScreen storeName={config.storeName} message={loadingMessage} />;
   }
 
   const active = SECTIONS.find((section) => section.id === activeId) ?? SECTIONS[0];
