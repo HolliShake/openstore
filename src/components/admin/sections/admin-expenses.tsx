@@ -11,16 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import SelectInput from "@/components/common/select.component";
 import { Badge } from "@/components/ui/badge";
-import { TableSkeleton } from "@/components/shared/table-skeleton";
+import DataTable from "@/components/common/table.component";
 import { queryKeys } from "@/lib/query-client";
 import { formatDateTime } from "@/lib/format";
 import { useMoney } from "@/hooks/use-money";
@@ -137,18 +130,14 @@ export function AdminExpenses() {
             </div>
             <div className="space-y-1.5">
               <Label>Category</Label>
-              <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {EXPENSE_CATEGORIES.map((c) => (
-                    <SelectItem key={c.value} value={c.value}>
-                      {c.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SelectInput
+                value={category}
+                onChange={setCategory}
+                options={EXPENSE_CATEGORIES.map((c) => ({
+                  label: c.label,
+                  value: c.value,
+                }))}
+              />
             </div>
             <div className="flex items-end">
               <Button type="submit" disabled={createMutation.isPending} className="w-full sm:w-auto">
@@ -170,61 +159,66 @@ export function AdminExpenses() {
           <Badge variant="secondary">Total: {money(total)}</Badge>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <TableSkeleton rows={6} columns={6} />
-          ) : (expenses?.length ?? 0) === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              No expenses recorded yet.
-            </p>
-          ) : (
-            <div className="max-h-96 overflow-y-auto rounded-md">
-              <Table className="min-w-[640px]">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>When</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>By</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                    <TableHead className="w-10" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {expenses!.map((e) => (
-                    <TableRow key={e.id}>
-                      <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-                        {formatDateTime(e.createdAt)}
-                      </TableCell>
-                      <TableCell className="font-medium">{e.description}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {expenseCategoryLabel(e.category)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {e.createdBy ?? <span className="italic opacity-60">unknown</span>}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums font-medium">
-                        {money(e.amount)}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive"
-                          onClick={() => deleteMutation.mutate(e.id)}
-                          disabled={deleteMutation.isPending}
-                          aria-label="Delete"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+          <DataTable
+            data={expenses ?? []}
+            isLoading={isLoading}
+            emptyState={
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                No expenses recorded yet.
+              </p>
+            }
+            rowKey={(expense) => expense.id}
+            className="min-w-[640px]"
+            containerClassName="max-h-96 rounded-md"
+            columns={[
+              {
+                header: "When",
+                className: "whitespace-nowrap text-xs text-muted-foreground",
+                render: (expense) => formatDateTime(expense.createdAt),
+              },
+              {
+                header: "Description",
+                className: "font-medium",
+                render: (expense) => expense.description,
+              },
+              {
+                header: "Category",
+                render: (expense) => (
+                  <Badge variant="outline">
+                    {expenseCategoryLabel(expense.category)}
+                  </Badge>
+                ),
+              },
+              {
+                header: "By",
+                className: "text-xs text-muted-foreground",
+                render: (expense) =>
+                  expense.createdBy ?? <span className="italic opacity-60">unknown</span>,
+              },
+              {
+                header: "Amount",
+                headerClassName: "text-right",
+                className: "text-right tabular-nums font-medium",
+                render: (expense) => money(expense.amount),
+              },
+              {
+                header: "",
+                headerClassName: "w-10",
+                render: (expense) => (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive hover:text-destructive"
+                    onClick={() => deleteMutation.mutate(expense.id)}
+                    disabled={deleteMutation.isPending}
+                    aria-label="Delete"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                ),
+              },
+            ]}
+          />
         </CardContent>
       </Card>
     </div>

@@ -13,45 +13,31 @@
 import { useEffect, useRef, useState } from "react";
 import { BrowserMultiFormatReader, IScannerControls } from "@zxing/browser";
 import { Camera, X, Loader2, ScanLine } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import Modal, { type ModalState } from "@/components/common/modal.component";
 
 export function BarcodeScannerDialog({
-  open,
-  onOpenChange,
+  controller,
   onDetected,
 }: {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
+  controller: ModalState<void>;
   onDetected: (barcode: string) => void;
 }) {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <ScanLine className="h-4 w-4" /> Scan product barcode
-          </DialogTitle>
-          <DialogDescription>
-            Point the camera at the product barcode. Detected codes auto-fill the cart.
-          </DialogDescription>
-        </DialogHeader>
+  const open = controller.isOpen;
 
+  return (
+    <Modal controller={controller} title="Scan product barcode" closable>
+      <p className="mb-4 text-sm text-muted-foreground">
+        Point the camera at the product barcode. Detected codes auto-fill the cart.
+      </p>
         {open && <Scanner onDetected={onDetected} />}
 
         <div className="flex items-center justify-end">
-          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" size="sm" onClick={controller.closeFn}>
             <X className="mr-1 h-4 w-4" /> Close
           </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+    </Modal>
   );
 }
 

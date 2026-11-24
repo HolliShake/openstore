@@ -12,16 +12,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import SelectInput from "@/components/common/select.component";
 import { Badge } from "@/components/ui/badge";
-import { TableSkeleton } from "@/components/shared/table-skeleton";
+import DataTable from "@/components/common/table.component";
 import { queryKeys } from "@/lib/query-client";
 import { formatDateTime } from "@/lib/format";
 import { useMoney } from "@/hooks/use-money";
@@ -155,20 +148,17 @@ export function AdminStockIn() {
           <form onSubmit={submit} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-1.5 lg:col-span-2">
               <Label>Product</Label>
-              <Select value={productId} onValueChange={onSelectChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select product…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {(products ?? [])
-                    .sort((a, b) => a.name.localeCompare(b.name))
-                    .map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.name} · {categoryLabel(p.category)} · stock {p.stock}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+              <SelectInput
+                value={productId}
+                onChange={onSelectChange}
+                placeholder="Select product…"
+                options={(products ?? [])
+                  .sort((a, b) => a.name.localeCompare(b.name))
+                  .map((p) => ({
+                    label: `${p.name} · ${categoryLabel(p.category)} · stock ${p.stock}`,
+                    value: p.id,
+                  }))}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="si-qty">Quantity</Label>
@@ -253,54 +243,63 @@ export function AdminStockIn() {
           <CardTitle className="text-base">Restock history</CardTitle>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <TableSkeleton rows={6} columns={7} />
-          ) : (stockIns?.length ?? 0) === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              No restocks recorded yet.
-            </p>
-          ) : (
-            <div className="max-h-96 overflow-y-auto rounded-md">
-              <Table className="min-w-[720px]">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>When</TableHead>
-                    <TableHead>Product</TableHead>
-                    <TableHead className="text-right">Qty</TableHead>
-                    <TableHead className="text-right">Unit cost</TableHead>
-                    <TableHead className="text-right">Total cost</TableHead>
-                    <TableHead>Supplier</TableHead>
-                    <TableHead>By</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {stockIns!.map((s) => (
-                    <TableRow key={s.id}>
-                      <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-                        {formatDateTime(s.createdAt)}
-                      </TableCell>
-                      <TableCell className="font-medium">{s.product.name}</TableCell>
-                      <TableCell className="text-right tabular-nums">{s.quantity}</TableCell>
-                      <TableCell className="text-right tabular-nums">{money(s.unitCost)}</TableCell>
-                      <TableCell className="text-right tabular-nums font-medium">
-                        {money(s.unitCost * s.quantity)}
-                      </TableCell>
-                      <TableCell>
-                        {s.supplier ? (
-                          <Badge variant="outline">{s.supplier}</Badge>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {s.createdBy ?? <span className="italic opacity-60">unknown</span>}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+          <DataTable
+            data={stockIns ?? []}
+            isLoading={isLoading}
+            emptyState={
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                No restocks recorded yet.
+              </p>
+            }
+            rowKey={(stockIn) => stockIn.id}
+            className="min-w-[720px]"
+            containerClassName="max-h-96 rounded-md"
+            columns={[
+              {
+                header: "When",
+                className: "whitespace-nowrap text-xs text-muted-foreground",
+                render: (stockIn) => formatDateTime(stockIn.createdAt),
+              },
+              {
+                header: "Product",
+                className: "font-medium",
+                render: (stockIn) => stockIn.product.name,
+              },
+              {
+                header: "Qty",
+                headerClassName: "text-right",
+                className: "text-right tabular-nums",
+                render: (stockIn) => stockIn.quantity,
+              },
+              {
+                header: "Unit cost",
+                headerClassName: "text-right",
+                className: "text-right tabular-nums",
+                render: (stockIn) => money(stockIn.unitCost),
+              },
+              {
+                header: "Total cost",
+                headerClassName: "text-right",
+                className: "text-right tabular-nums font-medium",
+                render: (stockIn) => money(stockIn.unitCost * stockIn.quantity),
+              },
+              {
+                header: "Supplier",
+                render: (stockIn) =>
+                  stockIn.supplier ? (
+                    <Badge variant="outline">{stockIn.supplier}</Badge>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  ),
+              },
+              {
+                header: "By",
+                className: "text-xs text-muted-foreground",
+                render: (stockIn) =>
+                  stockIn.createdBy ?? <span className="italic opacity-60">unknown</span>,
+              },
+            ]}
+          />
         </CardContent>
       </Card>
     </div>

@@ -10,13 +10,7 @@ import Link from "next/link";
 import { FileText, ListOrdered, ExternalLink, Printer, ShoppingCart } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import SelectInput from "@/components/common/select.component";
 import { SectionHeading } from "@/components/admin/sections/admin-expenses";
 
 export function AdminReports() {
@@ -53,18 +47,15 @@ export function AdminReports() {
           <CardContent className="space-y-3">
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Week:</span>
-              <Select value={week} onValueChange={setWeek}>
-                <SelectTrigger className="w-44">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {weekOptions.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SelectInput
+                value={week}
+                onChange={setWeek}
+                className="w-44"
+                options={weekOptions.map((o) => ({
+                  label: o.label,
+                  value: o.value,
+                }))}
+              />
             </div>
             <Button asChild className="w-full">
               <Link

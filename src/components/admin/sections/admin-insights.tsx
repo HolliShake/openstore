@@ -27,21 +27,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import SelectInput from "@/components/common/select.component";
+import DataTable from "@/components/common/table.component";
 import { formatDate } from "@/lib/format";
 import { useMoney } from "@/hooks/use-money";
 import { categoryEmoji, categoryLabel } from "@/lib/constants";
@@ -123,18 +110,15 @@ export function AdminInsights() {
             formatDate(range.start)
           } → ${formatDate(range.end)}`}
         />
-        <Select value={weeks} onValueChange={setWeeks}>
-          <SelectTrigger className="w-40">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {WEEK_OPTIONS.map((o) => (
-              <SelectItem key={o.value} value={o.value}>
-                {o.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <SelectInput
+          value={weeks}
+          onChange={setWeeks}
+          className="w-40"
+          options={WEEK_OPTIONS.map((o) => ({
+            label: o.label,
+            value: o.value,
+          }))}
+        />
       </div>
 
       {/* Summary KPIs */}
@@ -174,65 +158,77 @@ export function AdminInsights() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          {bestSellers.length === 0 || bestSellers[0].qtySold === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              No sales in this period yet.
-            </p>
-          ) : (
-            <div className="max-h-96 overflow-y-auto">
-              <Table className="min-w-[640px]">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12">#</TableHead>
-                    <TableHead>Product</TableHead>
-                    <TableHead className="text-right">Sold</TableHead>
-                    <TableHead className="text-right">Sales</TableHead>
-                    <TableHead className="text-right">Revenue</TableHead>
-                    <TableHead>Last sold</TableHead>
-                    <TableHead className="text-right">Stock</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {bestSellers
-                    .filter((r) => r.qtySold > 0)
-                    .map((r, i) => (
-                      <TableRow key={r.productId}>
-                        <TableCell className="font-bold tabular-nums">{i + 1}</TableCell>
-                        <TableCell>
-                          <div className="font-medium">{categoryEmoji(r.category)} {r.name}</div>
-                          <div className="text-[10px] text-muted-foreground">
-                            {categoryLabel(r.category)}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums font-medium">
-                          {r.qtySold}
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums text-muted-foreground">
-                          {r.saleCount}
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums font-medium">
-                          {money(r.revenue)}
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {r.lastSoldAt ? formatDate(r.lastSoldAt) : "—"}
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums">
-                          <span
-                            className={
-                              r.currentStock <= r.lowStockThreshold
-                                ? "text-amber-600 dark:text-amber-400 font-medium"
-                                : ""
-                            }
-                          >
-                            {r.currentStock}
-                          </span>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+          <DataTable
+            data={bestSellers.filter((row) => row.qtySold > 0)}
+            emptyState={
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                No sales in this period yet.
+              </p>
+            }
+            rowKey={(row) => row.productId}
+            className="min-w-[640px]"
+            containerClassName="max-h-96"
+            columns={[
+              {
+                header: "#",
+                headerClassName: "w-12",
+                className: "font-bold tabular-nums",
+                render: (_row, index) => index + 1,
+              },
+              {
+                header: "Product",
+                render: (row) => (
+                  <>
+                    <div className="font-medium">
+                      {categoryEmoji(row.category)} {row.name}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground">
+                      {categoryLabel(row.category)}
+                    </div>
+                  </>
+                ),
+              },
+              {
+                header: "Sold",
+                headerClassName: "text-right",
+                className: "text-right tabular-nums font-medium",
+                render: (row) => row.qtySold,
+              },
+              {
+                header: "Sales",
+                headerClassName: "text-right",
+                className: "text-right tabular-nums text-muted-foreground",
+                render: (row) => row.saleCount,
+              },
+              {
+                header: "Revenue",
+                headerClassName: "text-right",
+                className: "text-right tabular-nums font-medium",
+                render: (row) => money(row.revenue),
+              },
+              {
+                header: "Last sold",
+                className: "text-xs text-muted-foreground",
+                render: (row) => row.lastSoldAt ? formatDate(row.lastSoldAt) : "—",
+              },
+              {
+                header: "Stock",
+                headerClassName: "text-right",
+                className: "text-right tabular-nums",
+                render: (row) => (
+                  <span
+                    className={
+                      row.currentStock <= row.lowStockThreshold
+                        ? "text-amber-600 dark:text-amber-400 font-medium"
+                        : ""
+                    }
+                  >
+                    {row.currentStock}
+                  </span>
+                ),
+              },
+            ]}
+          />
         </CardContent>
       </Card>
 
@@ -251,57 +247,74 @@ export function AdminInsights() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          {slowMovers.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              No stocked products in this range.
-            </p>
-          ) : (
-            <div className="max-h-96 overflow-y-auto">
-              <Table className="min-w-[760px]">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Product</TableHead>
-                    <TableHead className="text-right">Sold</TableHead>
-                    <TableHead className="text-right">Last sold</TableHead>
-                    <TableHead className="text-right">Stock</TableHead>
-                    <TableHead className="text-right">Tied-up capital</TableHead>
-                    <TableHead>Recommendation</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {slowMovers.map((r) => (
-                    <TableRow key={r.productId}>
-                      <TableCell>
-                        <div className="font-medium">{categoryEmoji(r.category)} {r.name}</div>
-                        <div className="text-[10px] text-muted-foreground">
-                          {categoryLabel(r.category)} · cost {money(r.unitCost)}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {r.qtySold > 0 ? (
-                          <span className="text-muted-foreground">{r.qtySold}</span>
-                        ) : (
-                          <Badge variant="secondary" className="text-[10px]">0 sold</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right text-xs text-muted-foreground">
-                        {r.lastSoldAt
-                          ? `${r.weeksSinceLastSale}w ago`
-                          : <Badge variant="outline" className="text-[10px]">Never</Badge>}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">{r.currentStock}</TableCell>
-                      <TableCell className="text-right tabular-nums font-medium text-amber-600 dark:text-amber-400">
-                        {money(r.stockValue)}
-                      </TableCell>
-                      <TableCell>
-                        <RecommendationBadge row={r} weeks={range.weeks} />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+          <DataTable
+            data={slowMovers}
+            emptyState={
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                No stocked products in this range.
+              </p>
+            }
+            rowKey={(row) => row.productId}
+            className="min-w-[760px]"
+            containerClassName="max-h-96"
+            columns={[
+              {
+                header: "Product",
+                render: (row) => (
+                  <>
+                    <div className="font-medium">
+                      {categoryEmoji(row.category)} {row.name}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground">
+                      {categoryLabel(row.category)} · cost {money(row.unitCost)}
+                    </div>
+                  </>
+                ),
+              },
+              {
+                header: "Sold",
+                headerClassName: "text-right",
+                className: "text-right tabular-nums",
+                render: (row) =>
+                  row.qtySold > 0 ? (
+                    <span className="text-muted-foreground">{row.qtySold}</span>
+                  ) : (
+                    <Badge variant="secondary" className="text-[10px]">
+                      0 sold
+                    </Badge>
+                  ),
+              },
+              {
+                header: "Last sold",
+                headerClassName: "text-right",
+                className: "text-right text-xs text-muted-foreground",
+                render: (row) =>
+                  row.lastSoldAt ? (
+                    `${row.weeksSinceLastSale}w ago`
+                  ) : (
+                    <Badge variant="outline" className="text-[10px]">
+                      Never
+                    </Badge>
+                  ),
+              },
+              {
+                header: "Stock",
+                headerClassName: "text-right",
+                className: "text-right tabular-nums",
+                render: (row) => row.currentStock,
+              },
+              {
+                header: "Tied-up capital",
+                headerClassName: "text-right",
+                className: "text-right tabular-nums font-medium text-amber-600 dark:text-amber-400",
+                render: (row) => money(row.stockValue),
+              },
+              {
+                header: "Recommendation",
+                render: (row) => <RecommendationBadge row={row} weeks={range.weeks} />,
+              },
+            ]}
+          />
         </CardContent>
       </Card>
 

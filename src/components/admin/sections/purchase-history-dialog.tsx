@@ -11,26 +11,19 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { History, Store as StoreIcon } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import DataTable from "@/components/common/table.component";
+import Modal, { type ModalState } from "@/components/common/modal.component";
 import { queryKeys } from "@/lib/query-client";
 import { formatDateTime } from "@/lib/format";
 import { useMoney } from "@/hooks/use-money";
+
+export type PurchaseHistoryProduct = {
+  id: string;
+  name: string;
+  stock: number;
+  unitCost: number;
+};
 
 type StockInRow = {
   id: string;
@@ -43,20 +36,13 @@ type StockInRow = {
 };
 
 export function PurchaseHistoryDialog({
-  open,
-  onOpenChange,
-  product,
+  controller,
 }: {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-  product: {
-    id: string;
-    name: string;
-    stock: number;
-    unitCost: number;
-  } | null;
+  controller: ModalState<PurchaseHistoryProduct>;
 }) {
   const { money } = useMoney(); // configured currency
+  const open = controller.isOpen;
+  const product = controller.data;
   const { data: stockIns, isLoading } = useQuery<StockInRow[]>({
     queryKey: queryKeys.stockIns,
     queryFn: async () => {
@@ -76,18 +62,10 @@ export function PurchaseHistoryDialog({
   ) as string[];
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <History className="h-4 w-4" />
-            Purchase history
-          </DialogTitle>
-          <DialogDescription>
-            {product ? product.name : ""} — every restock batch, price, and supplier.
-          </DialogDescription>
-        </DialogHeader>
-
+    <Modal controller={controller} title="Purchase history" size="lg" closable>
+      <p className="mb-4 text-sm text-muted-foreground">
+        {product ? product.name : ""} — every restock batch, price, and supplier.
+      </p>
         {product && (
           <div className="grid grid-cols-3 gap-2 rounded-lg border bg-muted/30 p-3 text-center">
             <div>
@@ -126,53 +104,54 @@ export function PurchaseHistoryDialog({
           </div>
         )}
 
-        {isLoading ? (
-          <Skeleton className="h-40 w-full" />
-        ) : rows.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">
-            No restocks recorded for this product yet. The current stock came from the
-            initial product setup.
-          </p>
-        ) : (
-          <div className="max-h-72 overflow-y-auto rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>When</TableHead>
-                  <TableHead>Supplier</TableHead>
-                  <TableHead className="text-right">Qty</TableHead>
-                  <TableHead className="text-right">Price/unit</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-                      {formatDateTime(r.createdAt)}
-                    </TableCell>
-                    <TableCell>
-                      {r.supplier ? (
-                        <Badge variant="outline" className="text-[10px]">
-                          {r.supplier}
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground text-xs">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">{r.quantity}</TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {money(r.unitCost)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums font-medium">
-                      {money(r.unitCost * r.quantity)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+        <DataTable
+          data={rows}
+          isLoading={isLoading}
+          emptyState={
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              No restocks recorded for this product yet. The current stock came from the
+              initial product setup.
+            </p>
+          }
+          rowKey={(row) => row.id}
+          containerClassName="max-h-72 rounded-md border"
+          columns={[
+            {
+              header: "When",
+              className: "whitespace-nowrap text-xs text-muted-foreground",
+              render: (row) => formatDateTime(row.createdAt),
+            },
+            {
+              header: "Supplier",
+              render: (row) =>
+                row.supplier ? (
+                  <Badge variant="outline" className="text-[10px]">
+                    {row.supplier}
+                  </Badge>
+                ) : (
+                  <span className="text-muted-foreground text-xs">—</span>
+                ),
+            },
+            {
+              header: "Qty",
+              headerClassName: "text-right",
+              className: "text-right tabular-nums",
+              render: (row) => row.quantity,
+            },
+            {
+              header: "Price/unit",
+              headerClassName: "text-right",
+              className: "text-right tabular-nums",
+              render: (row) => money(row.unitCost),
+            },
+            {
+              header: "Total",
+              headerClassName: "text-right",
+              className: "text-right tabular-nums font-medium",
+              render: (row) => money(row.unitCost * row.quantity),
+            },
+          ]}
+        />
 
         <p className="text-[11px] leading-relaxed text-muted-foreground">
           The <strong className="text-foreground">avg cost / unit</strong> above is a weighted
@@ -180,7 +159,6 @@ export function PurchaseHistoryDialog({
           quantities you already had. Sales and losses use this average, so profit stays
           accurate even when prices differ between stores.
         </p>
-      </DialogContent>
-    </Dialog>
+    </Modal>
   );
 }

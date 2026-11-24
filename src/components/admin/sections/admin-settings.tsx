@@ -25,13 +25,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import SelectInput from "@/components/common/select.component";
 import { queryKeys } from "@/lib/query-client";
 import { SUPPORTED_CURRENCIES, isSupportedCurrency } from "@/lib/constants";
 import { useStoreConfig } from "@/components/providers/config-provider";
@@ -175,23 +169,19 @@ export function AdminSettings() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="currency">Currency</Label>
-                <Select
+                <SelectInput
+                  id="currency"
                   value={form.currency}
-                  onValueChange={(value) =>
+                  onChange={(value) =>
                     setForm((f) => ({ ...f, currency: value as (typeof SUPPORTED_CURRENCIES)[number]["code"] }))
                   }
-                >
-                  <SelectTrigger id="currency" className="w-full sm:w-72">
-                    <SelectValue placeholder="Select a currency" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SUPPORTED_CURRENCIES.map((c) => (
-                      <SelectItem key={c.code} value={c.code}>
-                        {c.symbol} {c.code} — {c.label} ({c.country})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  className="w-full sm:w-72"
+                  placeholder="Select a currency"
+                  options={SUPPORTED_CURRENCIES.map((c) => ({
+                    label: `${c.symbol} ${c.code} — ${c.label} (${c.country})`,
+                    value: c.code,
+                  }))}
+                />
                 <p className="text-xs text-muted-foreground">
                   Used for every price, sale, expense and report across the app.
                   Default: PHP (Philippine Peso).

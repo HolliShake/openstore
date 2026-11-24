@@ -26,41 +26,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { TableSkeleton } from "@/components/shared/table-skeleton";
+import DataTable from "@/components/common/table.component";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import Modal, { useModal, type ModalState } from "@/components/common/modal.component";
+import SelectInput from "@/components/common/select.component";
 import { formatDate } from "@/lib/format";
 import { toast } from "sonner";
 import { SectionHeading } from "@/components/admin/sections/admin-expenses";
@@ -84,8 +53,8 @@ type EditTarget =
 export function AdminCashiers() {
   const { data: session } = useSession();
   const qc = useQueryClient();
-  const [dialog, setDialog] = useState<EditTarget>(null);
-  const [deleteTarget, setDeleteTarget] = useState<StaffUser | null>(null);
+  const staffModal = useModal<Exclude<EditTarget, null>>();
+  const deleteModal = useModal<StaffUser>();
 
   const { data: users, isLoading } = useQuery<StaffUser[]>({
     queryKey: ["users"],
@@ -106,7 +75,7 @@ export function AdminCashiers() {
     },
     onSuccess: () => {
       toast.success("Account deleted. Past transactions keep the audit trail.");
-      setDeleteTarget(null);
+      deleteModal.closeFn();
       qc.invalidateQueries({ queryKey: ["users"] });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -122,7 +91,7 @@ export function AdminCashiers() {
           title="Cashiers"
           subtitle="Add cashier accounts for your staff. Every transaction they record is stamped with their name for auditing."
         />
-        <Button onClick={() => setDialog({ mode: "add" })}>
+        <Button onClick={() => staffModal.openFn({ mode: "add" })}>
           <UserRoundPlus className="mr-2 h-4 w-4" /> Add cashier
         </Button>
       </div>
@@ -138,87 +107,91 @@ export function AdminCashiers() {
           </div>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <TableSkeleton rows={6} columns={6} />
-          ) : (users?.length ?? 0) === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              No staff accounts found.
-            </p>
-          ) : (
-            <div className="rounded-md">
-              <Table className="min-w-[640px]">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Username</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead className="text-right">Sales recorded</TableHead>
-                    <TableHead>Added</TableHead>
-                    <TableHead className="w-24" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {users!.map((u) => {
-                    const isMe = session?.user?.id === u.id;
-                    return (
-                      <TableRow key={u.id}>
-                        <TableCell className="font-medium">
-                          {u.username}
-                          {isMe && (
-                            <Badge variant="outline" className="ml-1.5 h-4 px-1 text-[9px]">
-                              you
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {u.name ?? <span className="italic opacity-60">—</span>}
-                        </TableCell>
-                        <TableCell>
-                          {u.role === "admin" ? (
-                            <Badge className="gap-1">
-                              <ShieldCheck className="h-3 w-3" /> Admin
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline">Cashier</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums text-muted-foreground">
-                          {u._count?.sales ?? 0}
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-                          {formatDate(u.createdAt)}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => setDialog({ mode: "edit", user: u })}
-                              aria-label={`Edit ${u.username}`}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive hover:text-destructive"
-                              onClick={() => setDeleteTarget(u)}
-                              disabled={isMe}
-                              aria-label={`Delete ${u.username}`}
-                              title={isMe ? "You cannot delete your own account" : "Delete account"}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+          <DataTable
+            data={users ?? []}
+            isLoading={isLoading}
+            emptyState={
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                No staff accounts found.
+              </p>
+            }
+            rowKey={(user) => user.id}
+            className="min-w-[640px]"
+            columns={[
+              {
+                header: "Username",
+                className: "font-medium",
+                render: (user) => (
+                  <>
+                    {user.username}
+                    {session?.user?.id === user.id && (
+                      <Badge variant="outline" className="ml-1.5 h-4 px-1 text-[9px]">
+                        you
+                      </Badge>
+                    )}
+                  </>
+                ),
+              },
+              {
+                header: "Name",
+                className: "text-muted-foreground",
+                render: (user) =>
+                  user.name ?? <span className="italic opacity-60">—</span>,
+              },
+              {
+                header: "Role",
+                render: (user) =>
+                  user.role === "admin" ? (
+                    <Badge className="gap-1">
+                      <ShieldCheck className="h-3 w-3" /> Admin
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline">Cashier</Badge>
+                  ),
+              },
+              {
+                header: "Sales recorded",
+                className: "text-right tabular-nums text-muted-foreground",
+                render: (user) => user._count?.sales ?? 0,
+              },
+              {
+                header: "Added",
+                className: "whitespace-nowrap text-xs text-muted-foreground",
+                render: (user) => formatDate(user.createdAt),
+              },
+              {
+                header: "",
+                headerClassName: "w-24",
+                render: (user) => {
+                  const isMe = session?.user?.id === user.id;
+                  return (
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => staffModal.openFn({ mode: "edit", user })}
+                        aria-label={`Edit ${user.username}`}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        onClick={() => deleteModal.openFn(user)}
+                        disabled={isMe}
+                        aria-label={`Delete ${user.username}`}
+                        title={isMe ? "You cannot delete your own account" : "Delete account"}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  );
+                },
+              },
+            ]}
+          />
         </CardContent>
       </Card>
 
@@ -243,39 +216,39 @@ export function AdminCashiers() {
       </Card>
 
       <StaffDialog
-        target={dialog}
-        onClose={() => setDialog(null)}
+        controller={staffModal}
         onSaved={() => {
-          setDialog(null);
+          staffModal.closeFn();
           qc.invalidateQueries({ queryKey: ["users"] });
         }}
       />
 
-      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete “{deleteTarget?.username}”?</AlertDialogTitle>
-            <AlertDialogDescription>
-              The account will no longer be able to sign in. Sales they already recorded
-              keep their name in the audit trail. This cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={deleteMutation.isPending}
-              onClick={(e) => {
-                e.preventDefault();
-                if (deleteTarget) deleteMutation.mutate(deleteTarget.id);
-              }}
-            >
-              {deleteMutation.isPending && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <Modal
+        controller={deleteModal}
+        title={`Delete “${deleteModal.data?.username ?? ""}”?`}
+        size="sm"
+        closable
+      >
+        <p className="mb-6 text-sm text-muted-foreground">
+          The account will no longer be able to sign in. Sales they already recorded keep
+          their name in the audit trail. This cannot be undone.
+        </p>
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" onClick={deleteModal.closeFn}>
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            disabled={deleteMutation.isPending}
+            onClick={() => {
+              if (deleteModal.data) deleteMutation.mutate(deleteModal.data.id);
+            }}
+          >
+            {deleteMutation.isPending && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
+            Delete
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }
@@ -283,14 +256,13 @@ export function AdminCashiers() {
 /** Add / edit staff account dialog (create = add cashier or admin; edit =
  *  rename, change role, reset password). */
 function StaffDialog({
-  target,
-  onClose,
+  controller,
   onSaved,
 }: {
-  target: EditTarget;
-  onClose: () => void;
+  controller: ModalState<Exclude<EditTarget, null>>;
   onSaved: () => void;
 }) {
+  const target = controller.data ?? null;
   const isEdit = target?.mode === "edit";
   const [username, setUsername] = useState("");
   const [name, setName] = useState("");
@@ -355,16 +327,12 @@ function StaffDialog({
   }
 
   return (
-    <Dialog open={!!target} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit account" : "Add cashier"}</DialogTitle>
-          <DialogDescription>
-            {isEdit
-              ? "Update details or set a new password (leave blank to keep the current one)."
-              : "The cashier signs in on the same screen with these credentials."}
-          </DialogDescription>
-        </DialogHeader>
+    <Modal controller={controller} title={isEdit ? "Edit account" : "Add cashier"} size="sm" closable>
+      <p className="mb-4 text-sm text-muted-foreground">
+        {isEdit
+          ? "Update details or set a new password (leave blank to keep the current one)."
+          : "The cashier signs in on the same screen with these credentials."}
+      </p>
         <form onSubmit={submit} className="space-y-3" key={key}>
           <div className="space-y-1.5">
             <Label htmlFor="cash-username">Username</Label>
@@ -410,27 +378,25 @@ function StaffDialog({
           </div>
           <div className="space-y-1.5">
             <Label>Role</Label>
-            <Select value={role} onValueChange={setRole}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="cashier">Cashier — POS checkout only</SelectItem>
-                <SelectItem value="admin">Admin — full access</SelectItem>
-              </SelectContent>
-            </Select>
+            <SelectInput
+              value={role}
+              onChange={setRole}
+              options={[
+                { label: "Cashier — POS checkout only", value: "cashier" },
+                { label: "Admin — full access", value: "admin" },
+              ]}
+            />
           </div>
-          <DialogFooter className="gap-2">
-            <Button type="button" variant="outline" onClick={onClose}>
+          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+            <Button type="button" variant="outline" onClick={controller.closeFn}>
               Cancel
             </Button>
             <Button type="submit" disabled={saveMutation.isPending}>
               {saveMutation.isPending && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
               {isEdit ? "Save changes" : "Create account"}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
-      </DialogContent>
-    </Dialog>
+    </Modal>
   );
 }

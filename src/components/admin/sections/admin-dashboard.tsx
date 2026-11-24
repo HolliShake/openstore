@@ -35,13 +35,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import SelectInput from "@/components/common/select.component";
 import { queryKeys } from "@/lib/query-client";
 import { formatDateTime, weekLabel } from "@/lib/format";
 import { useMoney } from "@/hooks/use-money";
@@ -164,18 +158,18 @@ export function AdminDashboard() {
           title="Dashboard"
           subtitle={`${weekLabel(weekStart)} · ${weekly.saleCount} sale(s) this week`}
         />
-        <Select value={week} onValueChange={setWeek}>
-          <SelectTrigger className="w-40">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="0">This week</SelectItem>
-            <SelectItem value="1">Last week</SelectItem>
-            <SelectItem value="2">2 weeks ago</SelectItem>
-            <SelectItem value="3">3 weeks ago</SelectItem>
-            <SelectItem value="4">4 weeks ago</SelectItem>
-          </SelectContent>
-        </Select>
+        <SelectInput
+          value={week}
+          onChange={setWeek}
+          className="w-40"
+          options={[
+            { label: "This week", value: "0" },
+            { label: "Last week", value: "1" },
+            { label: "2 weeks ago", value: "2" },
+            { label: "3 weeks ago", value: "3" },
+            { label: "4 weeks ago", value: "4" },
+          ]}
+        />
       </div>
 
       {/* KPI grid — 2 columns on mobile so 8 KPIs fit in 4 rows instead of 8 */}

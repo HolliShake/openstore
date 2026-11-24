@@ -14,16 +14,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import SelectInput from "@/components/common/select.component";
 import { Badge } from "@/components/ui/badge";
-import { TableSkeleton } from "@/components/shared/table-skeleton";
+import DataTable from "@/components/common/table.component";
 import { queryKeys } from "@/lib/query-client";
 import { formatDateTime } from "@/lib/format";
 import { useMoney } from "@/hooks/use-money";
@@ -142,21 +135,18 @@ export function AdminLosses() {
           <form onSubmit={submit} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-1.5 lg:col-span-2">
               <Label>Product</Label>
-              <Select value={productId} onValueChange={setProductId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select product…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {(products ?? [])
-                    .filter((p) => p.stock > 0)
-                    .sort((a, b) => a.name.localeCompare(b.name))
-                    .map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.name} · stock {p.stock}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+              <SelectInput
+                value={productId}
+                onChange={setProductId}
+                placeholder="Select product…"
+                options={(products ?? [])
+                  .filter((p) => p.stock > 0)
+                  .sort((a, b) => a.name.localeCompare(b.name))
+                  .map((p) => ({
+                    label: `${p.name} · stock ${p.stock}`,
+                    value: p.id,
+                  }))}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="ls-qty">Quantity lost</Label>
@@ -172,18 +162,14 @@ export function AdminLosses() {
             </div>
             <div className="space-y-1.5">
               <Label>Reason</Label>
-              <Select value={reason} onValueChange={setReason}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {LOSS_REASONS.map((r) => (
-                    <SelectItem key={r.value} value={r.value}>
-                      {r.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SelectInput
+                value={reason}
+                onChange={setReason}
+                options={LOSS_REASONS.map((r) => ({
+                  label: r.label,
+                  value: r.value,
+                }))}
+              />
             </div>
             <div className="space-y-1.5 lg:col-span-3">
               <Label htmlFor="ls-note">Note (optional)</Label>
@@ -227,48 +213,54 @@ export function AdminLosses() {
           <Badge variant="destructive">Total loss value: {money(totalLossValue)}</Badge>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <TableSkeleton rows={6} columns={6} />
-          ) : (losses?.length ?? 0) === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              No losses recorded yet.
-            </p>
-          ) : (
-            <div className="max-h-96 overflow-y-auto rounded-md">
-              <Table className="min-w-[680px]">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>When</TableHead>
-                    <TableHead>Product</TableHead>
-                    <TableHead className="text-right">Qty</TableHead>
-                    <TableHead>Reason</TableHead>
-                    <TableHead>By</TableHead>
-                    <TableHead className="text-right">Cost value</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {losses!.map((l) => (
-                    <TableRow key={l.id}>
-                      <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-                        {formatDateTime(l.createdAt)}
-                      </TableCell>
-                      <TableCell className="font-medium">{l.product.name}</TableCell>
-                      <TableCell className="text-right tabular-nums">{l.quantity}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{lossReasonLabel(l.reason)}</Badge>
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {l.createdBy ?? <span className="italic opacity-60">unknown</span>}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums font-medium text-destructive">
-                        {money(l.unitCost * l.quantity)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+          <DataTable
+            data={losses ?? []}
+            isLoading={isLoading}
+            emptyState={
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                No losses recorded yet.
+              </p>
+            }
+            rowKey={(loss) => loss.id}
+            className="min-w-[680px]"
+            containerClassName="max-h-96 rounded-md"
+            columns={[
+              {
+                header: "When",
+                className: "whitespace-nowrap text-xs text-muted-foreground",
+                render: (loss) => formatDateTime(loss.createdAt),
+              },
+              {
+                header: "Product",
+                className: "font-medium",
+                render: (loss) => loss.product.name,
+              },
+              {
+                header: "Qty",
+                headerClassName: "text-right",
+                className: "text-right tabular-nums",
+                render: (loss) => loss.quantity,
+              },
+              {
+                header: "Reason",
+                render: (loss) => (
+                  <Badge variant="outline">{lossReasonLabel(loss.reason)}</Badge>
+                ),
+              },
+              {
+                header: "By",
+                className: "text-xs text-muted-foreground",
+                render: (loss) =>
+                  loss.createdBy ?? <span className="italic opacity-60">unknown</span>,
+              },
+              {
+                header: "Cost value",
+                headerClassName: "text-right",
+                className: "text-right tabular-nums font-medium text-destructive",
+                render: (loss) => money(loss.unitCost * loss.quantity),
+              },
+            ]}
+          />
         </CardContent>
       </Card>
     </div>

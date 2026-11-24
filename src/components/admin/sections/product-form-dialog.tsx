@@ -11,25 +11,12 @@
  */
 import { useEffect, useState } from "react";
 import { Loader2, Upload, Link as LinkIcon } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import Modal, { type ModalState } from "@/components/common/modal.component";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import SelectInput from "@/components/common/select.component";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CATEGORIES } from "@/lib/constants";
 import { useMoney } from "@/hooks/use-money";
@@ -52,16 +39,14 @@ export type ProductFormValue = {
 };
 
 export function ProductFormDialog({
-  open,
-  onOpenChange,
-  initial,
+  controller,
 }: {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-  initial?: ProductFormValue | null;
+  controller: ModalState<ProductFormValue>;
 }) {
   const qc = useQueryClient();
   const { symbol } = useMoney(); // configured currency
+  const open = controller.isOpen;
+  const initial = controller.data;
   const isEdit = !!initial?.id;
 
   const [name, setName] = useState("");
@@ -187,7 +172,7 @@ export function ProductFormDialog({
       toast.success(initial ? "Product updated" : "Product created");
       qc.invalidateQueries({ queryKey: queryKeys.products });
       qc.invalidateQueries({ queryKey: queryKeys.dashboard() });
-      onOpenChange(false);
+      controller.closeFn();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Save failed");
     } finally {
@@ -196,17 +181,12 @@ export function ProductFormDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit product" : "Add product"}</DialogTitle>
-          <DialogDescription>
-            {isEdit
-              ? "Update product details, pricing, and stock."
-              : "Fill in the product details. You can save and edit later."}
-          </DialogDescription>
-        </DialogHeader>
-
+    <Modal controller={controller} title={isEdit ? "Edit product" : "Add product"} size="2xl" closable>
+        <div className="mb-4 text-sm text-muted-foreground">
+          {isEdit
+            ? "Update product details, pricing, and stock."
+            : "Fill in the product details. You can save and edit later."}
+        </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Basics */}
           <div className="grid gap-3 sm:grid-cols-2">
@@ -222,18 +202,14 @@ export function ProductFormDialog({
             </div>
             <div className="space-y-1.5">
               <Label>Category</Label>
-              <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CATEGORIES.map((c) => (
-                    <SelectItem key={c.value} value={c.value}>
-                      {c.emoji} {c.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SelectInput
+                value={category}
+                onChange={setCategory}
+                options={CATEGORIES.map((c) => ({
+                  label: `${c.emoji} ${c.label}`,
+                  value: c.value,
+                }))}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="pf-barcode">Barcode (optional)</Label>
@@ -338,6 +314,7 @@ export function ProductFormDialog({
               {imageMode === "upload" ? (
                 <div className="space-y-1.5">
                   <Input
+                    key="image-upload"
                     type="file"
                     accept="image/png,image/jpeg,image/webp,image/gif"
                     disabled={uploading}
@@ -355,6 +332,7 @@ export function ProductFormDialog({
               ) : (
                 <div className="space-y-1.5">
                   <Input
+                    key="image-url"
                     type="url"
                     value={imageUrl}
                     onChange={(e) => {
@@ -388,17 +366,16 @@ export function ProductFormDialog({
             </div>
           </div>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button type="button" variant="outline" onClick={controller.closeFn}>
               Cancel
             </Button>
             <Button type="submit" disabled={saving}>
               {saving && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
               {isEdit ? "Save changes" : "Create product"}
             </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+          </div>
+      </form>
+    </Modal>
   );
 }

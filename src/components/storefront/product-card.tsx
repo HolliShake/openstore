@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { categoryEmoji, categoryLabel } from "@/lib/constants";
@@ -44,12 +43,10 @@ export function ProductCard({ product }: { product: StoreProduct }) {
       {/* Image */}
       <div className="relative aspect-[4/3] overflow-hidden bg-muted">
         {imgSrc ? (
-          <Image
+          <img
             src={imgSrc}
             alt={product.name}
-            fill
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-            className="object-cover transition-transform duration-500 group-hover:scale-105"
+            className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-muted-foreground/40">

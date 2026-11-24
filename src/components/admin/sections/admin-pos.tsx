@@ -17,7 +17,6 @@
  */
 import { useCallback, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import Image from "next/image";
 import {
   ScanLine,
   Search,
@@ -38,21 +37,9 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import SelectInput from "@/components/common/select.component";
+import DataTable from "@/components/common/table.component";
+import { useModal } from "@/components/common/modal.component";
 import { queryKeys } from "@/lib/query-client";
 import { formatDateTime } from "@/lib/format";
 import { useMoney } from "@/hooks/use-money";
@@ -100,7 +87,7 @@ export function AdminPOS() {
   const [manualEntry, setManualEntry] = useState(false);
   const [saleAt, setSaleAt] = useState("");
   const [note, setNote] = useState("");
-  const [scannerOpen, setScannerOpen] = useState(false);
+  const scannerModal = useModal<void>();
 
   const { data: products, isLoading: productsLoading } = useQuery<Product[]>({
     queryKey: queryKeys.products,
@@ -204,9 +191,9 @@ export function AdminPOS() {
       }
       addToCart(found, 1);
       toast.success(`Added ${found.name}`);
-      setScannerOpen(false);
+      scannerModal.closeFn();
     },
-    [products, addToCart],
+    [products, addToCart, scannerModal],
   );
 
   function updateQty(productId: string, delta: number) {
@@ -242,7 +229,7 @@ export function AdminPOS() {
           title="POS / Checkout"
           subtitle="Add products to the cart, then complete the sale. Stock is decremented automatically."
         />
-        <Button variant="outline" onClick={() => setScannerOpen(true)}>
+        <Button variant="outline" onClick={() => scannerModal.openFn(undefined)}>
           <ScanLine className="mr-2 h-4 w-4" /> Scan barcode
         </Button>
       </div>
@@ -264,19 +251,18 @@ export function AdminPOS() {
                   className="pl-9"
                 />
               </div>
-              <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger className="w-full sm:w-44">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  {CATEGORIES.map((c) => (
-                    <SelectItem key={c.value} value={c.value}>
-                      {c.emoji} {c.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <SelectInput
+                value={category}
+                onChange={setCategory}
+                className="w-full sm:w-44"
+                options={[
+                  { label: "All", value: "all" },
+                  ...CATEGORIES.map((c) => ({
+                    label: `${c.emoji} ${c.label}`,
+                    value: c.value,
+                  })),
+                ]}
+              />
             </div>
             <div className="grid max-h-[420px] grid-cols-2 gap-2 overflow-y-auto pr-1 sm:grid-cols-3">
               {productsLoading ? (
@@ -303,12 +289,10 @@ export function AdminPOS() {
                     >
                       <div className="relative aspect-square w-full overflow-hidden rounded-md bg-muted">
                         {img ? (
-                          <Image
+                          <img
                             src={img}
                             alt={p.name}
-                            fill
-                            sizes="100px"
-                            className="object-cover transition-transform group-hover:scale-105"
+                            className="absolute inset-0 h-full w-full object-cover transition-transform group-hover:scale-105"
                           />
                         ) : (
                           <div className="flex h-full w-full items-center justify-center">
@@ -422,18 +406,16 @@ export function AdminPOS() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground">Payment:</span>
-                  <Select value={payment} onValueChange={setPayment}>
-                    <SelectTrigger className="h-8 w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PAYMENT_METHODS.map((m) => (
-                        <SelectItem key={m.value} value={m.value}>
-                          {m.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SelectInput
+                    value={payment}
+                    onChange={setPayment}
+                    className="w-32"
+                    size="default"
+                    options={PAYMENT_METHODS.map((m) => ({
+                      label: m.label,
+                      value: m.value,
+                    }))}
+                  />
                 </div>
               </div>
 
@@ -501,69 +483,76 @@ export function AdminPOS() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {salesLoading ? (
-            <Skeleton className="h-24 w-full" />
-          ) : (recentSales?.length ?? 0) === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              No sales yet. Record your first sale above.
-            </p>
-          ) : (
-            <div className="max-h-72 overflow-y-auto rounded-md">
-              <Table className="min-w-[640px]">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>When</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead className="text-right">Items</TableHead>
-                    <TableHead>Payment</TableHead>
-                    <TableHead>Recorded by</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recentSales!.map((s) => (
-                    <TableRow key={s.id}>
-                      <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-                        {formatDateTime(s.createdAt)}
-                        {s.note && (
-                          <Badge
-                            variant="outline"
-                            className="ml-1.5 h-4 px-1 text-[9px] font-normal text-muted-foreground"
-                            title={s.note}
-                          >
-                            paper
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="max-w-[140px] truncate text-xs">
-                        {s.customerName ?? <span className="text-muted-foreground italic">Walk-in</span>}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">{s.items.length}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="capitalize">
-                          {s.payment}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="max-w-[130px] truncate text-xs text-muted-foreground">
-                        {s.createdBy ?? <span className="italic opacity-60">unknown</span>}
-                      </TableCell>
-                      <TableCell className="text-right font-medium tabular-nums">
-                        {money(s.total)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+          <DataTable
+            data={recentSales ?? []}
+            isLoading={salesLoading}
+            emptyState={
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                No sales yet. Record your first sale above.
+              </p>
+            }
+            rowKey={(sale) => sale.id}
+            className="min-w-[640px]"
+            containerClassName="max-h-72 rounded-md"
+            columns={[
+              {
+                header: "When",
+                className: "whitespace-nowrap text-xs text-muted-foreground",
+                render: (sale) => (
+                  <>
+                    {formatDateTime(sale.createdAt)}
+                    {sale.note && (
+                      <Badge
+                        variant="outline"
+                        className="ml-1.5 h-4 px-1 text-[9px] font-normal text-muted-foreground"
+                        title={sale.note}
+                      >
+                        paper
+                      </Badge>
+                    )}
+                  </>
+                ),
+              },
+              {
+                header: "Customer",
+                className: "max-w-[140px] truncate text-xs",
+                render: (sale) =>
+                  sale.customerName ?? (
+                    <span className="text-muted-foreground italic">Walk-in</span>
+                  ),
+              },
+              {
+                header: "Items",
+                headerClassName: "text-right",
+                className: "text-right tabular-nums",
+                render: (sale) => sale.items.length,
+              },
+              {
+                header: "Payment",
+                render: (sale) => (
+                  <Badge variant="outline" className="capitalize">
+                    {sale.payment}
+                  </Badge>
+                ),
+              },
+              {
+                header: "Recorded by",
+                className: "max-w-[130px] truncate text-xs text-muted-foreground",
+                render: (sale) =>
+                  sale.createdBy ?? <span className="italic opacity-60">unknown</span>,
+              },
+              {
+                header: "Total",
+                headerClassName: "text-right",
+                className: "text-right font-medium tabular-nums",
+                render: (sale) => money(sale.total),
+              },
+            ]}
+          />
         </CardContent>
       </Card>
 
-      <BarcodeScannerDialog
-        open={scannerOpen}
-        onOpenChange={setScannerOpen}
-        onDetected={handleBarcode}
-      />
+      <BarcodeScannerDialog controller={scannerModal} onDetected={handleBarcode} />
     </div>
   );
 }
