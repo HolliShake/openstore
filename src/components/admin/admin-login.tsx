@@ -194,32 +194,6 @@ export function AdminLogin() {
               </Button>
             </form>
 
-            <div className="mt-6 rounded-2xl border bg-muted/30 p-4">
-              <p className="text-sm font-medium">First time here?</p>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                Use the seeded admin account to get started.
-              </p>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <div className="rounded-lg bg-background/80 px-3 py-2">
-                  <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                    Username
-                  </p>
-                  <code className="mt-0.5 block font-mono text-xs">admin</code>
-                </div>
-                <div className="rounded-lg bg-background/80 px-3 py-2">
-                  <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                    Password
-                  </p>
-                  <code className="mt-0.5 block break-all font-mono text-xs">
-                    openstore2026
-                  </code>
-                </div>
-              </div>
-            </div>
-
-            <p className="mt-8 text-center text-xs text-muted-foreground">
-              Cashiers use the account provided by your store admin.
-            </p>
           </section>
         </div>
       </main>
