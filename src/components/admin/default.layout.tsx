@@ -44,6 +44,7 @@ export type DefaultLayoutProps = {
   active: AdminSection;
   activeId: AdminSectionId;
   config: StoreConfig;
+  configLoading: boolean;
   role: string;
   sections: AdminSection[];
   username: string;
@@ -55,6 +56,7 @@ export function DefaultLayout({
   activeId,
   config,
   role,
+  configLoading,
   sections,
   username,
   children,
@@ -82,19 +84,16 @@ export function DefaultLayout({
             </SheetTrigger>
             <SheetContent side="left" className="w-72 p-0">
               <SheetHeader className="px-4 py-4">
-                <SheetTitle className="flex items-center gap-2 text-left">
-                  {config.brandImage ? (
-                    <img
-                      src={config.brandImage}
-                      alt=""
-                      className="h-7 w-7 rounded-md object-cover"
-                    />
-                  ) : (
-                    <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                      <Store className="h-4 w-4" />
-                    </span>
-                  )}
-                  {config.storeName}
+                <SheetTitle
+                  className="flex items-center gap-2 text-left"
+                  aria-busy={configLoading}
+                >
+                  <BrandLogo
+                    config={config}
+                    loading={configLoading}
+                    className="h-7 w-7"
+                  />
+                  <StoreName config={config} loading={configLoading} />
                 </SheetTitle>
               </SheetHeader>
               <NavList
@@ -107,22 +106,18 @@ export function DefaultLayout({
             </SheetContent>
           </Sheet>
 
-          {config.brandImage ? (
-            <img
-              src={config.brandImage}
-              alt=""
-              className="h-8 w-8 rounded-md object-cover"
-            />
-          ) : (
-            <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <Store className="h-4 w-4" />
-            </span>
-          )}
+          <BrandLogo
+            config={config}
+            loading={configLoading}
+            className="h-8 w-8"
+          />
           <div className="leading-none">
-            <div className="text-sm font-semibold">
-              {role === "cashier"
-                ? `${config.storeName} Cashier`
-                : `${config.storeName} Admin`}
+            <div
+              className="flex items-center gap-1 text-sm font-semibold"
+              aria-busy={configLoading}
+            >
+              <StoreName config={config} loading={configLoading} />
+              <span>{role === "cashier" ? "Cashier" : "Admin"}</span>
             </div>
             <div className="hidden text-[10px] text-muted-foreground sm:block">
               {active.description}
@@ -161,6 +156,68 @@ export function DefaultLayout({
       </div>
     </div>
   );
+}
+
+function BrandLogo({
+  config,
+  loading,
+  className,
+}: {
+  config: StoreConfig;
+  loading: boolean;
+  className: string;
+}) {
+  if (loading) {
+    return (
+      <span
+        aria-hidden="true"
+        className={cn("shrink-0 animate-pulse rounded-md bg-muted", className)}
+      />
+    );
+  }
+
+  if (config.brandImage) {
+    return (
+      <img
+        src={config.brandImage}
+        alt=""
+        className={cn("shrink-0 rounded-md object-cover", className)}
+      />
+    );
+  }
+
+  return (
+    <span
+      className={cn(
+        "flex shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground",
+        className,
+      )}
+    >
+      <Store className="h-4 w-4" />
+    </span>
+  );
+}
+
+function StoreName({
+  config,
+  loading,
+}: {
+  config: StoreConfig;
+  loading: boolean;
+}) {
+  if (loading) {
+    return (
+      <>
+        <span
+          aria-hidden="true"
+          className="inline-block h-4 w-24 animate-pulse rounded bg-muted"
+        />
+        <span className="sr-only">Loading store name</span>
+      </>
+    );
+  }
+
+  return <span>{config.storeName}</span>;
 }
 
 function NavList({

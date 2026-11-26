@@ -51,7 +51,7 @@ export function AdminApp({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession();
   const router = useRouter();
   const pathname = usePathname();
-  const { config } = useStoreConfig();
+  const { config, isLoading: configLoading } = useStoreConfig();
 
   const sectionSlug = pathname.split("/")[2];
   const activeId =
@@ -88,6 +88,7 @@ export function AdminApp({ children }: { children: ReactNode }) {
       active={active}
       activeId={activeId}
       config={config}
+      configLoading={configLoading}
       role={role}
       sections={sections}
       username={session.user?.name ?? session.user?.username ?? "admin"}

@@ -1,11 +1,12 @@
 import { Store } from "lucide-react";
 
 type LoadingScreenProps = {
+  storeNameLoading: boolean;
   storeName: string;
   message: string;
 };
 
-export function LoadingScreen({ storeName, message }: LoadingScreenProps) {
+export function LoadingScreen({ storeNameLoading, storeName, message }: LoadingScreenProps) {
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background">
       <div
