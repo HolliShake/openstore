@@ -8,6 +8,7 @@ import { Store, Loader2, ArrowLeft, ArrowRight, ShieldCheck } from "lucide-react
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { useStoreConfig } from "@/components/providers/config-provider";
 import { toast } from "sonner";
@@ -25,7 +26,7 @@ export function AdminLogin() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const { config } = useStoreConfig();
+  const { config, isLoading: isStoreConfigLoading } = useStoreConfig();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -81,8 +82,13 @@ export function AdminLogin() {
               <div className="absolute -bottom-40 -left-24 size-96 rounded-full bg-primary-foreground/5 blur-2xl" />
             </div>
 
-            <div className="relative z-10 flex items-center gap-3">
-              {config.brandImage ? (
+            <div className="relative z-10 flex items-center gap-3" aria-busy={isStoreConfigLoading}>
+              {isStoreConfigLoading ? (
+                <Skeleton
+                  aria-hidden="true"
+                  className="size-12 shrink-0 rounded-2xl bg-primary-foreground/15"
+                />
+              ) : config.brandImage ? (
                 <img
                   src={config.brandImage}
                   alt=""
@@ -94,7 +100,15 @@ export function AdminLogin() {
                 </span>
               )}
               <div className="min-w-0">
-                <p className="truncate font-semibold">{config.storeName}</p>
+                {isStoreConfigLoading ? (
+                  // h-6 wrapper matches the text line height to avoid layout shift
+                  <div className="flex h-6 items-center">
+                    <Skeleton aria-hidden="true" className="h-4 w-32 bg-primary-foreground/15" />
+                    <span className="sr-only">Loading store details</span>
+                  </div>
+                ) : (
+                  <p className="truncate font-semibold">{config.storeName}</p>
+                )}
                 <p className="text-sm text-primary-foreground/65">Staff workspace</p>
               </div>
             </div>
@@ -121,8 +135,10 @@ export function AdminLogin() {
           </aside>
 
           <section className="flex flex-col justify-center p-6 sm:p-10 xl:p-14">
-            <div className="mb-8 flex items-center gap-3 lg:hidden">
-              {config.brandImage ? (
+            <div className="mb-8 flex items-center gap-3 lg:hidden" aria-busy={isStoreConfigLoading}>
+              {isStoreConfigLoading ? (
+                <Skeleton aria-hidden="true" className="size-11 shrink-0 rounded-xl" />
+              ) : config.brandImage ? (
                 <img
                   src={config.brandImage}
                   alt=""
@@ -134,7 +150,14 @@ export function AdminLogin() {
                 </span>
               )}
               <div className="min-w-0">
-                <p className="truncate font-semibold">{config.storeName}</p>
+                {isStoreConfigLoading ? (
+                  <div className="flex h-6 items-center">
+                    <Skeleton aria-hidden="true" className="h-4 w-32" />
+                    <span className="sr-only">Loading store details</span>
+                  </div>
+                ) : (
+                  <p className="truncate font-semibold">{config.storeName}</p>
+                )}
                 <p className="text-xs text-muted-foreground">Staff workspace</p>
               </div>
             </div>
